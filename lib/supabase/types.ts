@@ -1,4 +1,4 @@
-export type LeadStatus = 'novo' | 'em_contato' | 'convertido' | 'perdido'
+export type LeadStatus = 'novo' | 'pendente' | 'a_negociar'
 export type InventoryStatus = 'disponivel' | 'reservado' | 'vendido'
 export type PostStatus = 'ideia' | 'planejado' | 'publicado'
 

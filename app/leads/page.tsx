@@ -1,21 +1,20 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Nav from '@/components/nav'
+import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
 import type { Lead, Model, LeadStatus } from '@/lib/supabase/types'
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
-  novo: 'Novo',
-  em_contato: 'Em contato',
-  convertido: 'Convertido',
-  perdido: 'Perdido',
+  novo:       'Novo',
+  pendente:   'Pendente',
+  a_negociar: 'A negociar',
 }
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
-  novo: 'bg-blue-100 text-blue-700',
-  em_contato: 'bg-yellow-100 text-yellow-700',
-  convertido: 'bg-green-100 text-green-700',
-  perdido: 'bg-gray-100 text-gray-500',
+  novo:       'bg-blue-100 text-blue-700',
+  pendente:   'bg-yellow-100 text-yellow-700',
+  a_negociar: 'bg-orange-100 text-orange-700',
 }
 
 export default function LeadsPage() {
@@ -24,8 +23,10 @@ export default function LeadsPage() {
   const [models, setModels] = useState<Model[]>([])
   const [filterStatus, setFilterStatus] = useState('')
   const [filterModel, setFilterModel] = useState('')
+  const [filterModelName, setFilterModelName] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
+  const editingLeadRef = useRef<Lead | null>(null)
   const [loading, setLoading] = useState(true)
 
   const [form, setForm] = useState({
@@ -33,17 +34,37 @@ export default function LeadsPage() {
     interested_model: '', status: 'novo' as LeadStatus,
     notes: '', last_contacted_at: '',
   })
+  const [autoStatus, setAutoStatus] = useState<{ reason: string; hasStock: boolean } | null>(null)
 
+  async function handleModelChange(id: string) {
+    setForm(f => ({ ...f, interested_model: id }))
+    setAutoStatus(null)
+    if (!id) return
+    const { data, error } = await supabase
+      .from('inventory')
+      .select('id')
+      .eq('model_id', id)
+      .eq('status', 'disponivel')
+      .limit(1)
+    if (error) return
+    const hasStock = (data?.length ?? 0) > 0
+    setAutoStatus({ hasStock, reason: hasStock ? 'Moto disponível no estoque' : 'Modelo não disponível no estoque' })
+    if (!editingLeadRef.current) {
+      setForm(f => ({ ...f, status: hasStock ? 'a_negociar' : 'pendente' }))
+    }
+  }
+
+  useEffect(() => { editingLeadRef.current = editingLead }, [editingLead])
   useEffect(() => { loadData() }, [filterStatus, filterModel])
 
   async function loadData() {
     setLoading(true)
-    const [modelsRes, leadsQuery] = await Promise.all([
+    const [modelsRes, leadsRes] = await Promise.all([
       supabase.from('models').select('*').order('name'),
       buildLeadsQuery(),
     ])
     setModels(modelsRes.data ?? [])
-    setLeads(leadsQuery.data ?? [])
+    setLeads(leadsRes.data ?? [])
     setLoading(false)
   }
 
@@ -57,11 +78,13 @@ export default function LeadsPage() {
   function openNew() {
     setEditingLead(null)
     setForm({ name: '', phone: '', email: '', interested_model: '', status: 'novo', notes: '', last_contacted_at: '' })
+    setAutoStatus(null)
     setShowForm(true)
   }
 
   function openEdit(lead: Lead) {
     setEditingLead(lead)
+    setAutoStatus(null)
     setForm({
       name: lead.name,
       phone: lead.phone ?? '',
@@ -100,10 +123,7 @@ export default function LeadsPage() {
       <main className="flex-1 p-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold text-gray-900">Leads</h1>
-          <button
-            onClick={openNew}
-            className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700"
-          >
+          <button onClick={openNew} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
             + Novo Lead
           </button>
         </div>
@@ -125,9 +145,7 @@ export default function LeadsPage() {
             className="border border-gray-300 rounded px-3 py-1.5 text-sm"
           >
             <option value="">Todos os modelos</option>
-            {models.map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
+            {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         </div>
 
@@ -152,7 +170,21 @@ export default function LeadsPage() {
                 {leads.map(lead => (
                   <tr key={lead.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-900">{lead.name}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono">{lead.phone ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-600 font-mono text-sm">{lead.phone ?? '—'}</span>
+                        {lead.phone && (
+                          <a
+                            href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 bg-green-500 text-white text-xs px-2 py-0.5 rounded hover:bg-green-600"
+                          >
+                            WhatsApp
+                          </a>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{(lead.models as Model | undefined)?.name ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[lead.status]}`}>
@@ -165,10 +197,7 @@ export default function LeadsPage() {
                         : '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => openEdit(lead)}
-                        className="text-blue-600 hover:underline text-xs"
-                      >
+                      <button onClick={() => openEdit(lead)} className="text-blue-600 hover:underline text-xs">
                         Editar
                       </button>
                     </td>
@@ -214,38 +243,38 @@ export default function LeadsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Modelo de interesse *</label>
-                    <select
-                      required value={form.interested_model}
-                      onChange={e => setForm(f => ({ ...f, interested_model: e.target.value }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    >
-                      <option value="">Selecione...</option>
-                      {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
                     <select
                       value={form.status}
-                      onChange={e => setForm(f => ({ ...f, status: e.target.value as LeadStatus }))}
+                      onChange={e => { setForm(f => ({ ...f, status: e.target.value as LeadStatus })); setAutoStatus(null) }}
                       className="w-full border rounded px-3 py-1.5 text-sm"
                     >
                       {Object.entries(STATUS_LABELS).map(([v, l]) => (
                         <option key={v} value={v}>{l}</option>
                       ))}
                     </select>
+                    {autoStatus && (
+                      <p className={`text-xs mt-1 ${autoStatus.hasStock ? 'text-green-600' : 'text-yellow-600'}`}>
+                        ↑ auto — {autoStatus.reason}
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Último contato</label>
-                    <input
-                      type="date" value={form.last_contacted_at}
-                      onChange={e => setForm(f => ({ ...f, last_contacted_at: e.target.value }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    />
-                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Modelo de interesse *</label>
+                  <ModelCombobox
+                    value={form.interested_model}
+                    onChange={handleModelChange}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Último contato</label>
+                  <input
+                    type="date" value={form.last_contacted_at}
+                    onChange={e => setForm(f => ({ ...f, last_contacted_at: e.target.value }))}
+                    className="w-full border rounded px-3 py-1.5 text-sm"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Notas</label>
