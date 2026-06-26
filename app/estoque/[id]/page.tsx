@@ -3,6 +3,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/nav'
 import MatchPopup from '@/components/match-popup'
+import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
 import type { InventoryItem, Model, InventoryStatus, MatchedLead } from '@/lib/supabase/types'
 
@@ -74,7 +75,7 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
       .from('leads')
       .select('name, phone, email, notes')
       .eq('interested_model', form.model_id)
-      .not('status', 'in', '("convertido","perdido")')
+      .in('status', ['novo', 'pendente', 'a_negociar'])
       .order('last_contacted_at', { ascending: true, nullsFirst: true })
     setMatchLeads(data ?? [])
     setSearching(false)
@@ -104,13 +105,11 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Modelo *</label>
-              <select
-                required value={form.model_id}
-                onChange={e => setForm(f => ({ ...f, model_id: e.target.value }))}
-                className="w-full border rounded px-3 py-1.5 text-sm"
-              >
-                {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
+              <ModelCombobox
+                value={form.model_id}
+                onChange={id => setForm(f => ({ ...f, model_id: id }))}
+                required
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Marca *</label>

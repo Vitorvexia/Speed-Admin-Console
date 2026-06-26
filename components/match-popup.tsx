@@ -28,18 +28,30 @@ export default function MatchPopup({ leads, modelName, onClose }: Props) {
           <ul className="divide-y max-h-80 overflow-y-auto">
             {leads.map((lead, i) => (
               <li key={i} className="p-4">
-                <div className="font-medium">{lead.name}</div>
-                {lead.phone && (
-                  <div className="text-sm text-gray-700 font-mono mt-1 select-all">
-                    {lead.phone}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium">{lead.name}</div>
+                    {lead.phone && (
+                      <div className="text-sm text-gray-700 font-mono mt-0.5 select-all">{lead.phone}</div>
+                    )}
+                    {lead.email && (
+                      <div className="text-sm text-gray-500">{lead.email}</div>
+                    )}
+                    {lead.notes && (
+                      <div className="text-xs text-gray-400 mt-1 italic">{lead.notes}</div>
+                    )}
                   </div>
-                )}
-                {lead.email && (
-                  <div className="text-sm text-gray-500">{lead.email}</div>
-                )}
-                {lead.notes && (
-                  <div className="text-xs text-gray-400 mt-1 italic">{lead.notes}</div>
-                )}
+                  {lead.phone && (
+                    <a
+                      href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 bg-green-500 text-white text-xs px-3 py-1.5 rounded hover:bg-green-600 font-medium"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
