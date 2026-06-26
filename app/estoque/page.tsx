@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Nav from '@/components/nav'
 import MatchPopup from '@/components/match-popup'
+import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
 import type { InventoryItem, Model, InventoryStatus, MatchedLead } from '@/lib/supabase/types'
 
@@ -22,6 +23,7 @@ export default function EstoquePage() {
   const supabase = createClient()
   const [items, setItems] = useState<InventoryItem[]>([])
   const [models, setModels] = useState<Model[]>([])
+  const [leadCounts, setLeadCounts] = useState<Record<string, number>>({})
   const [filterStatus, setFilterStatus] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -37,12 +39,18 @@ export default function EstoquePage() {
 
   async function loadData() {
     setLoading(true)
-    const [modelsRes, itemsQuery] = await Promise.all([
+    const [modelsRes, itemsQuery, leadsRes] = await Promise.all([
       supabase.from('models').select('*').order('name'),
       buildItemsQuery(),
+      supabase.from('leads').select('interested_model').in('status', ['novo', 'pendente', 'a_negociar']),
     ])
     setModels(modelsRes.data ?? [])
     setItems(itemsQuery.data ?? [])
+    const counts: Record<string, number> = {}
+    for (const l of leadsRes.data ?? []) {
+      counts[l.interested_model] = (counts[l.interested_model] ?? 0) + 1
+    }
+    setLeadCounts(counts)
     setLoading(false)
   }
 
@@ -74,7 +82,7 @@ export default function EstoquePage() {
       .from('leads')
       .select('name, phone, email, notes')
       .eq('interested_model', form.model_id)
-      .not('status', 'in', '("convertido","perdido")')
+      .in('status', ['novo', 'pendente', 'a_negociar'])
       .order('last_contacted_at', { ascending: true, nullsFirst: true })
 
     setShowForm(false)
@@ -129,6 +137,7 @@ export default function EstoquePage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Km</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Preço</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Leads</th>
                   <th />
                 </tr>
               </thead>
@@ -146,6 +155,27 @@ export default function EstoquePage() {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[item.status]}`}>
                         {STATUS_LABELS[item.status]}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {(leadCounts[item.model_id] ?? 0) > 0 ? (
+                        <button
+                          onClick={async () => {
+                            const { data } = await supabase
+                              .from('leads')
+                              .select('name, phone, email, notes')
+                              .eq('interested_model', item.model_id)
+                              .in('status', ['novo', 'pendente', 'a_negociar'])
+                              .order('last_contacted_at', { ascending: true, nullsFirst: true })
+                            setMatchModelName((item.models as Model | undefined)?.name ?? '')
+                            setMatchLeads(data ?? [])
+                          }}
+                          className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full hover:bg-orange-200"
+                        >
+                          {leadCounts[item.model_id]} lead{leadCounts[item.model_id] > 1 ? 's' : ''}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Link href={`/estoque/${item.id}`} className="text-blue-600 hover:underline text-xs">
@@ -169,14 +199,11 @@ export default function EstoquePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Modelo *</label>
-                    <select
-                      required value={form.model_id}
-                      onChange={e => setForm(f => ({ ...f, model_id: e.target.value }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    >
-                      <option value="">Selecione...</option>
-                      {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
+                    <ModelCombobox
+                      value={form.model_id}
+                      onChange={id => setForm(f => ({ ...f, model_id: id }))}
+                      required
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Marca *</label>
