@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import Nav from '@/components/nav'
+import LayoutShell from '@/components/layout-shell'
 import MatchPopup from '@/components/match-popup'
 import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
@@ -9,14 +9,22 @@ import type { InventoryItem, Model, InventoryStatus, MatchedLead } from '@/lib/s
 
 const STATUS_LABELS: Record<InventoryStatus, string> = {
   disponivel: 'Disponível',
-  reservado: 'Reservado',
-  vendido: 'Vendido',
+  reservado:  'Reservado',
+  vendido:    'Vendido',
 }
 
-const STATUS_COLORS: Record<InventoryStatus, string> = {
-  disponivel: 'bg-green-100 text-green-700',
-  reservado: 'bg-yellow-100 text-yellow-700',
-  vendido: 'bg-gray-100 text-gray-500',
+const STATUS_STYLE: Record<InventoryStatus, { bg: string; color: string; border: string }> = {
+  disponivel: { bg: 'rgba(34,197,94,0.1)',  color: '#4ADE80', border: 'rgba(34,197,94,0.25)'  },
+  reservado:  { bg: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: 'rgba(245,158,11,0.25)' },
+  vendido:    { bg: 'rgba(255,255,255,0.05)', color: '#64748B', border: 'rgba(255,255,255,0.1)' },
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block font-data text-[10px] font-semibold text-sp-muted uppercase tracking-[0.15em] mb-1.5">
+      {children}
+    </label>
+  )
 }
 
 export default function EstoquePage() {
@@ -29,6 +37,7 @@ export default function EstoquePage() {
   const [loading, setLoading] = useState(true)
   const [matchLeads, setMatchLeads] = useState<MatchedLead[] | null>(null)
   const [matchModelName, setMatchModelName] = useState('')
+  const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null)
 
   const [form, setForm] = useState({
     model_id: '', brand: '', year: '', color: '',
@@ -42,7 +51,7 @@ export default function EstoquePage() {
     const [modelsRes, itemsQuery, leadsRes] = await Promise.all([
       supabase.from('models').select('*').order('name'),
       buildItemsQuery(),
-      supabase.from('leads').select('interested_model').in('status', ['novo', 'pendente', 'a_negociar']),
+      supabase.from('leads').select('interested_model').in('status', ['pendente', 'a_negociar']),
     ])
     setModels(modelsRes.data ?? [])
     setItems(itemsQuery.data ?? [])
@@ -58,6 +67,12 @@ export default function EstoquePage() {
     let q = supabase.from('inventory').select('*, models(name)').order('created_at', { ascending: false })
     if (filterStatus) q = q.eq('status', filterStatus)
     return q
+  }
+
+  async function handleDelete(id: string) {
+    await supabase.from('inventory').delete().eq('id', id)
+    setDeletingItem(null)
+    loadData()
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -77,12 +92,11 @@ export default function EstoquePage() {
     if (error) return
 
     const selectedModel = models.find(m => m.id === form.model_id)
-
     const { data: matched } = await supabase
       .from('leads')
       .select('name, phone, email, notes')
       .eq('interested_model', form.model_id)
-      .in('status', ['novo', 'pendente', 'a_negociar'])
+      .in('status', ['pendente', 'a_negociar'])
       .order('last_contacted_at', { ascending: true, nullsFirst: true })
 
     setShowForm(false)
@@ -95,202 +109,303 @@ export default function EstoquePage() {
     }
   }
 
+  const actions = (
+    <button
+      onClick={() => setShowForm(true)}
+      className="sp-btn-primary px-4 py-2 text-white text-[12px]"
+    >
+      + Nova Moto
+    </button>
+  )
+
   return (
-    <div className="flex h-full min-h-screen">
-      <Nav />
-      <main className="flex-1 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold text-gray-900">Estoque</h1>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700"
-          >
+    <LayoutShell title="Estoque" actions={actions}>
+      {/* Filtro */}
+      <div className="mb-5">
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          className="sp-select font-data text-[13px] px-4 py-2"
+        >
+          <option value="">Todos os status</option>
+          {Object.entries(STATUS_LABELS).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sp-muted text-[13px] font-data py-8">
+          <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="60" strokeDashoffset="20" />
+          </svg>
+          Carregando...
+        </div>
+      ) : items.length === 0 ? (
+        <div className="sp-card p-10 text-center">
+          <p className="font-data text-[13px] text-sp-muted">Estoque vazio.</p>
+          <button onClick={() => setShowForm(true)} className="sp-btn-primary mt-4 px-5 py-2 text-white text-[12px]">
             + Nova Moto
           </button>
         </div>
-
-        <div className="mb-4">
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm"
-          >
-            <option value="">Todos os status</option>
-            {Object.entries(STATUS_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
-        </div>
-
-        {loading ? (
-          <p className="text-gray-400 text-sm">Carregando...</p>
-        ) : items.length === 0 ? (
-          <p className="text-gray-400 text-sm">Estoque vazio.</p>
-        ) : (
-          <div className="bg-white rounded-lg border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Modelo</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Marca</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Ano</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Km</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Preço</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Leads</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {items.map(item => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{(item.models as Model | undefined)?.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{item.brand}</td>
-                    <td className="px-4 py-3 text-gray-600">{item.year ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{item.mileage_km != null ? `${item.mileage_km.toLocaleString('pt-BR')} km` : '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {item.price != null ? `R$ ${Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[item.status]}`}>
-                        {STATUS_LABELS[item.status]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {(leadCounts[item.model_id] ?? 0) > 0 ? (
-                        <button
-                          onClick={async () => {
-                            const { data } = await supabase
-                              .from('leads')
-                              .select('name, phone, email, notes')
-                              .eq('interested_model', item.model_id)
-                              .in('status', ['novo', 'pendente', 'a_negociar'])
-                              .order('last_contacted_at', { ascending: true, nullsFirst: true })
-                            setMatchModelName((item.models as Model | undefined)?.name ?? '')
-                            setMatchLeads(data ?? [])
-                          }}
-                          className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full hover:bg-orange-200"
-                        >
-                          {leadCounts[item.model_id]} lead{leadCounts[item.model_id] > 1 ? 's' : ''}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/estoque/${item.id}`} className="text-blue-600 hover:underline text-xs">
+      ) : (
+        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                {['Modelo', 'Marca', 'Ano', 'Km', 'Preço', 'Status', 'Leads', ''].map(h => (
+                  <th key={h} className="text-left px-4 py-3 font-data font-semibold text-sp-muted text-[10px] uppercase tracking-wider">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, i) => (
+                <tr
+                  key={item.id}
+                  style={{ borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : undefined }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
+                >
+                  <td className="px-4 py-3 font-data font-semibold text-sp-primary">{(item.models as Model | undefined)?.name}</td>
+                  <td className="px-4 py-3 font-data text-sp-muted">{item.brand}</td>
+                  <td className="px-4 py-3 font-data text-sp-muted">{item.year ?? '—'}</td>
+                  <td className="px-4 py-3 font-data text-sp-muted">
+                    {item.mileage_km != null ? `${item.mileage_km.toLocaleString('pt-BR')} km` : '—'}
+                  </td>
+                  <td className="px-4 py-3 font-data text-sp-primary font-semibold">
+                    {item.price != null ? `R$ ${Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className="px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold"
+                      style={{
+                        background: STATUS_STYLE[item.status].bg,
+                        color: STATUS_STYLE[item.status].color,
+                        border: `1px solid ${STATUS_STYLE[item.status].border}`,
+                      }}
+                    >
+                      {STATUS_LABELS[item.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {(leadCounts[item.model_id] ?? 0) > 0 ? (
+                      <button
+                        onClick={async () => {
+                          const { data } = await supabase
+                            .from('leads')
+                            .select('name, phone, email, notes')
+                            .eq('interested_model', item.model_id)
+                            .in('status', ['pendente', 'a_negociar'])
+                            .order('last_contacted_at', { ascending: true, nullsFirst: true })
+                          setMatchModelName((item.models as Model | undefined)?.name ?? '')
+                          setMatchLeads(data ?? [])
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
+                        style={{
+                          background: 'rgba(255,31,44,0.1)',
+                          border: '1px solid rgba(255,31,44,0.25)',
+                          color: '#FF8080',
+                        }}
+                      >
+                        {leadCounts[item.model_id]} lead{leadCounts[item.model_id] > 1 ? 's' : ''}
+                      </button>
+                    ) : (
+                      <span className="font-data text-[12px] text-sp-faint">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/estoque/${item.id}`}
+                        className="font-data text-[11px] text-sp-muted hover:text-sp-blue transition-colors"
+                      >
                         Detalhes
                       </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      <button
+                        onClick={() => setDeletingItem({ id: item.id, name: `${(item.models as Model | undefined)?.name ?? 'Moto'} ${item.brand}` })}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red"
+                        style={{ background: 'rgba(255,255,255,0.04)' }}
+                        title="Excluir"
+                      >
+                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-        {showForm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-              <div className="p-4 border-b">
-                <h2 className="font-semibold">Nova Moto</h2>
-              </div>
-              <form onSubmit={handleSubmit} className="p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Modelo *</label>
-                    <ModelCombobox
-                      value={form.model_id}
-                      onChange={id => setForm(f => ({ ...f, model_id: id }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Marca *</label>
-                    <input
-                      required value={form.brand}
-                      onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Ano</label>
-                    <input
-                      type="number" value={form.year}
-                      onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Km</label>
-                    <input
-                      type="number" value={form.mileage_km}
-                      onChange={e => setForm(f => ({ ...f, mileage_km: e.target.value }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Cor</label>
-                    <input
-                      value={form.color}
-                      onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Preço (R$)</label>
-                    <input
-                      type="number" step="0.01" value={form.price}
-                      onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                    <select
-                      value={form.status}
-                      onChange={e => setForm(f => ({ ...f, status: e.target.value as InventoryStatus }))}
-                      className="w-full border rounded px-3 py-1.5 text-sm"
-                    >
-                      {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                        <option key={v} value={v}>{l}</option>
-                      ))}
-                    </select>
-                  </div>
+      {/* Modal nova moto */}
+      {showForm && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl overflow-hidden"
+            style={{
+              background: '#0D1118',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 24px 64px rgba(0,0,0,0.8)',
+            }}
+          >
+            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h2 className="font-display text-[13px] font-bold text-sp-primary uppercase tracking-[0.1em]">Nova Moto</h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-sp-muted hover:text-sp-primary hover:bg-white/[0.05] transition-colors"
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Modelo *</Label>
+                  <ModelCombobox value={form.model_id} onChange={id => setForm(f => ({ ...f, model_id: id }))} required />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Notas</label>
-                  <textarea
-                    value={form.notes} rows={2}
-                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                    className="w-full border rounded px-3 py-1.5 text-sm"
+                  <Label>Marca *</Label>
+                  <input
+                    required value={form.brand}
+                    onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
+                    className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
                   />
                 </div>
-                <div className="flex gap-3 pt-2">
-                  <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
-                    Salvar e buscar leads
-                  </button>
-                  <button type="button" onClick={() => setShowForm(false)} className="text-gray-600 px-4 py-2 rounded text-sm border hover:bg-gray-50">
-                    Cancelar
-                  </button>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>Ano</Label>
+                  <input
+                    type="number" value={form.year}
+                    onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
+                    className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
+                  />
                 </div>
-              </form>
+                <div>
+                  <Label>Km</Label>
+                  <input
+                    type="number" value={form.mileage_km}
+                    onChange={e => setForm(f => ({ ...f, mileage_km: e.target.value }))}
+                    className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
+                  />
+                </div>
+                <div>
+                  <Label>Cor</Label>
+                  <input
+                    value={form.color}
+                    onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
+                    className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Preço (R$)</Label>
+                  <input
+                    type="number" step="0.01" value={form.price}
+                    onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                    className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
+                  />
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <select
+                    value={form.status}
+                    onChange={e => setForm(f => ({ ...f, status: e.target.value as InventoryStatus }))}
+                    className="sp-select w-full px-4 py-2.5 text-[13px]"
+                  >
+                    {Object.entries(STATUS_LABELS).map(([v, l]) => (
+                      <option key={v} value={v}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <Label>Notas</Label>
+                <textarea
+                  value={form.notes} rows={2}
+                  onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                  className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data resize-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" className="sp-btn-primary px-5 py-2.5 text-white text-[12px]">
+                  Salvar e buscar leads
+                </button>
+                <button
+                  type="button" onClick={() => setShowForm(false)}
+                  className="px-5 py-2.5 rounded-lg font-data text-[12px] text-sp-muted hover:text-sp-primary transition-colors"
+                  style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {matchLeads !== null && (
+        <MatchPopup leads={matchLeads} modelName={matchModelName} onClose={() => setMatchLeads(null)} />
+      )}
+
+      {/* Popup excluir */}
+      {deletingItem && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setDeletingItem(null)}
+        >
+          <div
+            className="w-full max-w-xs rounded-2xl p-6 flex flex-col gap-4"
+            style={{
+              background: '#0D1118',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 24px 64px rgba(0,0,0,0.8)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-1">
+              <h3 className="font-display text-[14px] font-bold text-sp-primary uppercase tracking-[0.08em]">
+                Excluir moto?
+              </h3>
+              <p className="font-data text-[12px] text-sp-muted">
+                <span className="text-sp-primary font-semibold">{deletingItem.name}</span> será removida permanentemente.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleDelete(deletingItem.id)}
+                className="flex-1 py-2.5 rounded-lg font-data text-[12px] font-semibold text-white transition-colors"
+                style={{ background: '#FF1F2C', boxShadow: '0 0 16px rgba(255,31,44,0.3)' }}
+              >
+                Excluir
+              </button>
+              <button
+                onClick={() => setDeletingItem(null)}
+                className="flex-1 py-2.5 rounded-lg font-data text-[12px] text-sp-muted hover:text-sp-primary transition-colors"
+                style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                Cancelar
+              </button>
             </div>
           </div>
-        )}
-
-        {matchLeads !== null && (
-          <MatchPopup
-            leads={matchLeads}
-            modelName={matchModelName}
-            onClose={() => setMatchLeads(null)}
-          />
-        )}
-      </main>
-    </div>
+        </div>
+      )}
+    </LayoutShell>
   )
 }

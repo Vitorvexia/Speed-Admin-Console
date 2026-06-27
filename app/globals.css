@@ -1,26 +1,163 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-sp-red:        #FF1F2C;
+  --color-sp-red-dark:   #D91722;
+  --color-sp-red-glow:   rgba(255,31,44,0.18);
+  --color-sp-base:       #07090D;
+  --color-sp-surface:    #0D1118;
+  --color-sp-elevated:   #131B26;
+  --color-sp-border:     rgba(255,255,255,0.07);
+  --color-sp-border-hi:  rgba(255,255,255,0.13);
+  --color-sp-primary:    #F1F5F9;
+  --color-sp-muted:      #64748B;
+  --color-sp-faint:      #1E293B;
+  --color-sp-green:      #22C55E;
+  --color-sp-amber:      #F59E0B;
+  --color-sp-blue:       #38BDF8;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+* { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #07090D;
+  color: #F1F5F9;
+  font-family: var(--font-inter, Inter, system-ui, sans-serif);
+}
+
+.font-display {
+  font-family: var(--font-barlow, 'Barlow Condensed', Oswald, Impact, sans-serif);
+}
+
+.font-data {
+  font-family: var(--font-space, 'Space Grotesk', monospace);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+/* Card — inner top highlight simulates light from above */
+.sp-card {
+  background: #0D1118;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* Glow on active/focus red elements */
+.sp-glow-red {
+  box-shadow: 0 0 12px rgba(255,31,44,0.4), 0 0 40px rgba(255,31,44,0.1);
+}
+
+/* Nav active item glow */
+.sp-nav-active {
+  background: linear-gradient(90deg, rgba(255,31,44,0.12) 0%, transparent 100%);
+  border-left: 2px solid #FF1F2C;
+  box-shadow: inset 4px 0 16px rgba(255,31,44,0.08);
+}
+
+/* Subtle pulse for the active nav indicator */
+@keyframes nav-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* Progress bar shimmer */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Page background: grid + radial glow */
+.sp-bg {
+  background-color: #07090D;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255,31,44,0.06) 0%, transparent 70%),
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+  background-attachment: fixed;
+}
+
+/* Topbar backdrop blur */
+.sp-topbar {
+  background: rgba(7,9,13,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+/* Nav */
+.sp-nav {
+  background: linear-gradient(180deg, #0A0D14 0%, #07090D 100%);
+  border-right: 1px solid rgba(255,255,255,0.07);
+}
+
+/* Red number glow */
+.sp-num-glow {
+  text-shadow: 0 0 20px rgba(255,31,44,0.6), 0 0 60px rgba(255,31,44,0.2);
+}
+
+/* Input focus */
+.sp-input {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sp-input:focus {
+  outline: none;
+  border-color: rgba(255,31,44,0.5);
+  box-shadow: 0 0 0 3px rgba(255,31,44,0.08);
+}
+
+/* Select dark */
+.sp-select {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: #F1F5F9;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  transition: border-color 0.15s;
+}
+
+.sp-select:focus {
+  outline: none;
+  border-color: rgba(255,31,44,0.5);
+  box-shadow: 0 0 0 3px rgba(255,31,44,0.08);
+}
+
+.sp-select option {
+  background: #0D1118;
+  color: #F1F5F9;
+}
+
+/* Button primary */
+.sp-btn-primary {
+  background: #FF1F2C;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.sp-btn-primary:hover {
+  background: #D91722;
+  box-shadow: 0 0 20px rgba(255,31,44,0.35);
+  transform: translateY(-1px);
+}
+
+.sp-btn-primary:active {
+  transform: translateY(0);
 }

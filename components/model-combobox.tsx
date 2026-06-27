@@ -71,17 +71,30 @@ export default function ModelCombobox({ value, onChange, required }: Props) {
         onChange={e => { setQuery(e.target.value); setOpen(true); if (!e.target.value) onChange('') }}
         onFocus={() => setOpen(true)}
         placeholder="Buscar ou criar modelo..."
-        className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary placeholder:text-sp-faint font-data"
       />
       <input type="hidden" value={value} required={required} />
 
       {open && (filtered.length > 0 || showCreate) && (
-        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-52 overflow-y-auto">
+        <ul
+          className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden max-h-52 overflow-y-auto"
+          style={{
+            background: '#131B26',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+          }}
+        >
           {filtered.map(m => (
             <li
               key={m.id}
               onMouseDown={() => handleSelect(m)}
-              className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 ${value === m.id ? 'bg-blue-50 font-medium' : ''}`}
+              className="px-4 py-2.5 font-data text-[13px] cursor-pointer transition-colors"
+              style={{
+                color: value === m.id ? '#FF1F2C' : '#94A3B8',
+                background: value === m.id ? 'rgba(255,31,44,0.08)' : undefined,
+              }}
+              onMouseEnter={e => { if (value !== m.id) (e.currentTarget as HTMLLIElement).style.background = 'rgba(255,255,255,0.04)' }}
+              onMouseLeave={e => { if (value !== m.id) (e.currentTarget as HTMLLIElement).style.background = '' }}
             >
               {m.name}
             </li>
@@ -89,7 +102,13 @@ export default function ModelCombobox({ value, onChange, required }: Props) {
           {showCreate && (
             <li
               onMouseDown={handleCreate}
-              className="px-3 py-2 text-sm cursor-pointer text-blue-600 hover:bg-blue-50 border-t flex items-center gap-2"
+              className="px-4 py-2.5 font-data text-[13px] cursor-pointer transition-colors"
+              style={{
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                color: '#38BDF8',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLLIElement).style.background = 'rgba(56,189,248,0.06)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLLIElement).style.background = '' }}
             >
               {creating ? 'Criando...' : <>+ Criar <strong>&quot;{query.trim()}&quot;</strong></>}
             </li>

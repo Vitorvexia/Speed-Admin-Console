@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
-import Nav from '@/components/nav'
+import LayoutShell from '@/components/layout-shell'
 import MatchPopup from '@/components/match-popup'
 import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
@@ -9,8 +9,16 @@ import type { InventoryItem, Model, InventoryStatus, MatchedLead } from '@/lib/s
 
 const STATUS_LABELS: Record<InventoryStatus, string> = {
   disponivel: 'Disponível',
-  reservado: 'Reservado',
-  vendido: 'Vendido',
+  reservado:  'Reservado',
+  vendido:    'Vendido',
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block font-data text-[10px] font-semibold text-sp-muted uppercase tracking-[0.15em] mb-1.5">
+      {children}
+    </label>
+  )
 }
 
 export default function EstoqueDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -75,87 +83,99 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
       .from('leads')
       .select('name, phone, email, notes')
       .eq('interested_model', form.model_id)
-      .in('status', ['novo', 'pendente', 'a_negociar'])
+      .in('status', ['pendente', 'a_negociar'])
       .order('last_contacted_at', { ascending: true, nullsFirst: true })
     setMatchLeads(data ?? [])
     setSearching(false)
   }
 
-  if (!item) return (
-    <div className="flex h-full min-h-screen">
-      <Nav />
-      <main className="flex-1 p-6 text-gray-400 text-sm">Carregando...</main>
-    </div>
-  )
+  if (!item) {
+    return (
+      <LayoutShell title="Estoque">
+        <div className="flex items-center gap-2 text-sp-muted text-[13px] font-data py-8">
+          <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="60" strokeDashoffset="20" />
+          </svg>
+          Carregando...
+        </div>
+      </LayoutShell>
+    )
+  }
 
   const selectedModel = models.find(m => m.id === form.model_id)
+  const pageTitle = `${(item.models as Model | undefined)?.name ?? ''} — ${item.brand}`
+
+  const backAction = (
+    <button
+      onClick={() => router.back()}
+      className="flex items-center gap-1.5 font-data text-[12px] text-sp-muted hover:text-sp-primary transition-colors"
+    >
+      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <polyline points="15 18 9 12 15 6" />
+      </svg>
+      Voltar
+    </button>
+  )
 
   return (
-    <div className="flex h-full min-h-screen">
-      <Nav />
-      <main className="flex-1 p-6 max-w-2xl">
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => router.back()} className="text-sm text-gray-400 hover:text-gray-600">← Voltar</button>
-          <h1 className="text-xl font-bold text-gray-900">
-            {(item.models as Model | undefined)?.name} — {item.brand}
-          </h1>
-        </div>
-
-        <form onSubmit={handleSave} className="bg-white rounded-lg border p-5 space-y-4">
+    <LayoutShell title={pageTitle} actions={backAction}>
+      <div className="max-w-2xl">
+        <form onSubmit={handleSave} className="sp-card p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Modelo *</label>
-              <ModelCombobox
-                value={form.model_id}
-                onChange={id => setForm(f => ({ ...f, model_id: id }))}
-                required
-              />
+              <Label>Modelo *</Label>
+              <ModelCombobox value={form.model_id} onChange={id => setForm(f => ({ ...f, model_id: id }))} required />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Marca *</label>
+              <Label>Marca *</Label>
               <input
                 required value={form.brand}
                 onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
-                className="w-full border rounded px-3 py-1.5 text-sm"
+                className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
               />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Ano</label>
-              <input type="number" value={form.year}
+              <Label>Ano</Label>
+              <input
+                type="number" value={form.year}
                 onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
-                className="w-full border rounded px-3 py-1.5 text-sm"
+                className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Km</label>
-              <input type="number" value={form.mileage_km}
+              <Label>Km</Label>
+              <input
+                type="number" value={form.mileage_km}
                 onChange={e => setForm(f => ({ ...f, mileage_km: e.target.value }))}
-                className="w-full border rounded px-3 py-1.5 text-sm"
+                className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Cor</label>
-              <input value={form.color}
+              <Label>Cor</Label>
+              <input
+                value={form.color}
                 onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                className="w-full border rounded px-3 py-1.5 text-sm"
+                className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Preço (R$)</label>
-              <input type="number" step="0.01" value={form.price}
+              <Label>Preço (R$)</Label>
+              <input
+                type="number" step="0.01" value={form.price}
                 onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                className="w-full border rounded px-3 py-1.5 text-sm"
+                className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-              <select value={form.status}
+              <Label>Status</Label>
+              <select
+                value={form.status}
                 onChange={e => setForm(f => ({ ...f, status: e.target.value as InventoryStatus }))}
-                className="w-full border rounded px-3 py-1.5 text-sm"
+                className="sp-select w-full px-4 py-2.5 text-[13px]"
               >
                 {Object.entries(STATUS_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
@@ -164,15 +184,18 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Notas</label>
-            <textarea value={form.notes} rows={3}
+            <Label>Notas</Label>
+            <textarea
+              value={form.notes} rows={3}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              className="w-full border rounded px-3 py-1.5 text-sm"
+              className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data resize-none"
             />
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={saving}
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="submit" disabled={saving}
+              className="sp-btn-primary px-5 py-2.5 text-white text-[12px] disabled:opacity-50"
             >
               {saving ? 'Salvando...' : 'Salvar'}
             </button>
@@ -180,13 +203,21 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
               type="button"
               onClick={handleMatchSearch}
               disabled={searching}
-              className="border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-data text-[12px] text-sp-muted hover:text-sp-primary transition-colors disabled:opacity-50"
+              style={{ border: '1px solid rgba(255,255,255,0.08)' }}
             >
-              {searching ? 'Buscando...' : 'Buscar leads interessados'}
+              {searching ? (
+                <>
+                  <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="60" strokeDashoffset="20" />
+                  </svg>
+                  Buscando...
+                </>
+              ) : 'Buscar leads interessados'}
             </button>
           </div>
         </form>
-      </main>
+      </div>
 
       {matchLeads !== null && (
         <MatchPopup
@@ -195,6 +226,6 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
           onClose={() => setMatchLeads(null)}
         />
       )}
-    </div>
+    </LayoutShell>
   )
 }
