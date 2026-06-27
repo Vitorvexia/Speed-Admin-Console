@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import LayoutShell from '@/components/layout-shell'
 import Calendar from '@/components/calendar'
@@ -53,6 +54,9 @@ function StatBar({
 
 export default async function DashboardPage() {
   const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const [leadsRes, topModelsRes] = await Promise.all([
     supabase.from('leads').select('status'),
