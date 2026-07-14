@@ -94,6 +94,12 @@ export default function PostagensPage() {
   const [toggling, setToggling]     = useState<string | null>(null)
   const [ctaModal, setCtaModal]     = useState<{ text: string; moto: string } | null>(null)
   const [copied, setCopied]         = useState(false)
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    const todayISO = toISO(new Date())
+    const mon = getMondayOfWeek(new Date())
+    const idx = Array.from({ length: 6 }, (_, i) => toISO(addDays(mon, i))).indexOf(todayISO)
+    return idx >= 0 ? idx : 0
+  })
 
   const days = Array.from({ length: 6 }, (_, i) => addDays(weekStart, i))
   const weekEnd = days[5]
@@ -212,9 +218,154 @@ export default function PostagensPage() {
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0">
-      <div className="rounded-xl overflow-hidden min-w-[640px]" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+      {/* Mobile — seletor de dia + cards verticais */}
+      <div className="block md:hidden">
+        {/* Tabs de dias */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none">
+          {days.map((d, i) => {
+            const isToday = toISO(d) === toISO(today)
+            const active = selectedDayIndex === i
+            return (
+              <button
+                key={i}
+                onClick={() => setSelectedDayIndex(i)}
+                className="flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-xl transition-all"
+                style={{
+                  background: active ? 'rgba(255,31,44,0.12)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${active ? 'rgba(255,31,44,0.35)' : 'rgba(255,255,255,0.07)'}`,
+                  minWidth: 52,
+                }}
+              >
+                <span className="font-data text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: active ? '#FF1F2C' : isToday ? '#FF1F2C' : '#64748B' }}>
+                  {DAY_NAMES[i]}
+                </span>
+                <span className="font-data text-[13px] font-bold mt-0.5"
+                  style={{ color: active ? '#FF1F2C' : isToday ? '#FF6B6B' : '#94A3B8' }}>
+                  {display(d)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Cards de slot para o dia selecionado */}
+        <div className="space-y-3">
+          {SLOTS.map((slot, si) => {
+            const d = days[selectedDayIndex]
+            const post = getPost(d, slot.key)
+            const done = post?.status === 'publicado'
+            const cellKey = `${toISO(d)}-${slot.key}`
+            const loading = toggling === cellKey
+            const moto = (slot.key === 'moto_dia' || slot.key === 'cta') ? getMotoForDay(selectedDayIndex) : null
+            const itype = slot.key === 'interativo' ? getInterativoForDay(selectedDayIndex) : null
+            const ctaText = (slot.key === 'cta' && moto) ? generateCTA(moto) : null
+
+            return (
+              <div key={slot.key} className="sp-card p-4"
+                style={{ background: done ? 'rgba(34,197,94,0.04)' : undefined }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-data text-[13px] font-bold" style={{ color: slot.color }}>
+                        {slot.time}
+                      </span>
+                      <span className="font-data text-[12px] font-semibold text-sp-primary">{slot.label}</span>
+                    </div>
+                    <span className="font-data text-[11px] text-sp-muted">{slot.desc}</span>
+
+                    {/* Sugestão contextual */}
+                    {moto && (
+                      <div className="mt-2 font-data text-[12px]" style={{ color: done ? '#4ADE80' : slot.color }}>
+                        {moto.name}
+                        {moto.price && (
+                          <span className="text-sp-muted ml-1 text-[11px]">
+                            R$ {Number(moto.price).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {itype && (
+                      <div className="mt-2">
+                        <span className="font-data text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: done ? 'rgba(34,197,94,0.15)' : 'rgba(167,139,250,0.12)',
+                            border: `1px solid ${done ? 'rgba(34,197,94,0.3)' : 'rgba(167,139,250,0.25)'}`,
+                            color: done ? '#4ADE80' : '#A78BFA',
+                          }}>
+                          {itype}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Toggle */}
+                  <button
+                    onClick={() => !loading && toggle(d, slot.key as SlotKey)}
+                    className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all"
+                    style={done ? {
+                      background: 'rgba(34,197,94,0.18)',
+                      border: '2px solid #22C55E',
+                      boxShadow: '0 0 10px rgba(34,197,94,0.3)',
+                    } : {
+                      border: '2px solid rgba(255,255,255,0.12)',
+                    }}
+                  >
+                    {loading ? (
+                      <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="#64748B" strokeWidth="3" strokeDasharray="60" strokeDashoffset="20" />
+                      </svg>
+                    ) : done ? (
+                      <svg width="14" height="14" fill="none" stroke="#22C55E" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    ) : null}
+                  </button>
+                </div>
+
+                {/* Ações */}
+                <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <button
+                    onClick={() => {
+                      window.location.href = 'instagram://camera'
+                      setTimeout(() => { window.open('https://www.instagram.com/', '_blank') }, 1200)
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-data text-[11px] font-semibold transition-all"
+                    style={{
+                      background: done ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${done ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                      color: done ? '#4ADE80' : '#94A3B8',
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="2" y="2" width="20" height="20" rx="5" />
+                      <circle cx="12" cy="12" r="4" />
+                      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+                    </svg>
+                    Abrir Story
+                  </button>
+                  {ctaText && (
+                    <button
+                      onClick={() => setCtaModal({ text: ctaText, moto: moto?.name ?? '' })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-data text-[11px] font-semibold transition-all"
+                      style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', color: '#38BDF8' }}
+                    >
+                      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                      Copiar CTA
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Desktop — grid */}
+      <div className="hidden md:block">
+      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
         {/* Header dos dias */}
         <div className="grid" style={{ gridTemplateColumns: '140px repeat(6, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.025)' }}>
           <div className="px-4 py-3" />
