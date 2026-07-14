@@ -179,114 +179,140 @@ export default function LeadsPage() {
           </button>
         </div>
       ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                {['Nome', 'Telefone', 'Modelo', 'Status', 'Último contato', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 font-data font-semibold text-sp-muted text-[10px] uppercase tracking-wider">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead, i) => (
-                <tr
-                  key={lead.id}
-                  style={{
-                    borderBottom: i < leads.length - 1 ? '1px solid rgba(255,255,255,0.05)' : undefined,
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
-                >
-                  <td className="px-4 py-3 font-data font-semibold text-sp-primary">{lead.name}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-data text-sp-muted">{lead.phone ?? '—'}</span>
-                      {lead.phone && (
-                        <a
-                          href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
-                          style={{
-                            background: 'rgba(34,197,94,0.1)',
-                            border: '1px solid rgba(34,197,94,0.25)',
-                            color: '#4ADE80',
-                          }}
-                        >
-                          WA
-                        </a>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 font-data text-sp-muted">{(lead.models as Model | undefined)?.name ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className="px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold"
-                      style={{
-                        background: STATUS_STYLE[lead.status].bg,
-                        color: STATUS_STYLE[lead.status].color,
-                        border: `1px solid ${STATUS_STYLE[lead.status].border}`,
-                      }}
-                    >
-                      {STATUS_LABELS[lead.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-data text-sp-muted text-[12px]">
-                    {lead.last_contacted_at
-                      ? new Date(lead.last_contacted_at).toLocaleDateString('pt-BR')
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(lead)}
-                        className="font-data text-[11px] text-sp-muted hover:text-sp-blue transition-colors"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => setDeletingItem({ id: lead.id, name: lead.name })}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red"
-                        style={{ background: 'rgba(255,255,255,0.04)' }}
-                        title="Excluir"
-                      >
-                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                          <path d="M10 11v6M14 11v6" />
-                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
+        <>
+          {/* Desktop — tabela */}
+          <div className="hidden md:block rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  {['Nome', 'Telefone', 'Modelo', 'Status', 'Último contato', ''].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-data font-semibold text-sp-muted text-[10px] uppercase tracking-wider">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {leads.map((lead, i) => (
+                  <tr
+                    key={lead.id}
+                    style={{ borderBottom: i < leads.length - 1 ? '1px solid rgba(255,255,255,0.05)' : undefined }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
+                  >
+                    <td className="px-4 py-3 font-data font-semibold text-sp-primary">{lead.name}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-data text-sp-muted">{lead.phone ?? '—'}</span>
+                        {lead.phone && (
+                          <a href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
+                            style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ADE80' }}>
+                            WA
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-data text-sp-muted">{(lead.models as Model | undefined)?.name ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold"
+                        style={{ background: STATUS_STYLE[lead.status].bg, color: STATUS_STYLE[lead.status].color, border: `1px solid ${STATUS_STYLE[lead.status].border}` }}>
+                        {STATUS_LABELS[lead.status]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-data text-sp-muted text-[12px]">
+                      {lead.last_contacted_at ? new Date(lead.last_contacted_at).toLocaleDateString('pt-BR') : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => openEdit(lead)} className="font-data text-[11px] text-sp-muted hover:text-sp-blue transition-colors">
+                          Editar
+                        </button>
+                        <button onClick={() => setDeletingItem({ id: lead.id, name: lead.name })}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red"
+                          style={{ background: 'rgba(255,255,255,0.04)' }} title="Excluir">
+                          <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile — cards */}
+          <div className="block md:hidden space-y-3">
+            {leads.map(lead => (
+              <div key={lead.id} className="sp-card p-4">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <span className="font-data font-semibold text-sp-primary text-[14px]">{lead.name}</span>
+                  <span className="px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold flex-shrink-0"
+                    style={{ background: STATUS_STYLE[lead.status].bg, color: STATUS_STYLE[lead.status].color, border: `1px solid ${STATUS_STYLE[lead.status].border}` }}>
+                    {STATUS_LABELS[lead.status]}
+                  </span>
+                </div>
+                {lead.phone ? (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-data text-[13px] text-sp-muted">{lead.phone}</span>
+                    <a href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-data text-[10px] font-semibold"
+                      style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ADE80' }}>
+                      WA
+                    </a>
+                  </div>
+                ) : null}
+                <div className="font-data text-[12px] text-sp-muted mb-1">
+                  {(lead.models as Model | undefined)?.name ?? '—'}
+                </div>
+                {lead.last_contacted_at && (
+                  <div className="font-data text-[11px] text-sp-muted mb-1">
+                    Último contato: {new Date(lead.last_contacted_at).toLocaleDateString('pt-BR')}
+                  </div>
+                )}
+                <div className="flex gap-2 pt-3 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <button onClick={() => openEdit(lead)}
+                    className="flex-1 py-2 rounded-lg font-data text-[12px] text-sp-muted hover:text-sp-blue transition-colors text-center"
+                    style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                    Editar
+                  </button>
+                  <button onClick={() => setDeletingItem({ id: lead.id, name: lead.name })}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red flex-shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.04)' }}>
+                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Modal */}
       {showForm && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 flex items-end md:items-center justify-center z-50 p-0 md:p-4"
           style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
         >
           <div
-            className="w-full max-w-lg rounded-2xl overflow-hidden"
+            className="w-full md:max-w-lg rounded-t-2xl md:rounded-2xl flex flex-col max-h-[90vh]"
             style={{
               background: '#0D1118',
               border: '1px solid rgba(255,255,255,0.1)',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 24px 64px rgba(0,0,0,0.8)',
             }}
           >
-            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="px-5 py-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h2 className="font-display text-[13px] font-bold text-sp-primary uppercase tracking-[0.1em]">
                 {editingLead ? 'Editar Lead' : 'Novo Lead'}
               </h2>
@@ -300,8 +326,8 @@ export default function LeadsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label>Nome *</Label>
                   <input
@@ -319,7 +345,7 @@ export default function LeadsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label>Email</Label>
                   <input
@@ -366,7 +392,7 @@ export default function LeadsPage() {
                   className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data resize-none"
                 />
               </div>
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2 pt-1 pb-2">
                 <button type="submit" className="sp-btn-primary px-5 py-2.5 text-white text-[12px]">
                   Salvar
                 </button>
