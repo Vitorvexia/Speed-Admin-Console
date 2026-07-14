@@ -5,6 +5,7 @@ import LayoutShell from '@/components/layout-shell'
 import MatchPopup from '@/components/match-popup'
 import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
+import { syncLeadStatusForModel } from '@/lib/supabase/lead-sync'
 import type { InventoryItem, Model, InventoryStatus, MatchedLead } from '@/lib/supabase/types'
 
 const STATUS_LABELS: Record<InventoryStatus, string> = {
@@ -37,7 +38,7 @@ export default function EstoquePage() {
   const [loading, setLoading] = useState(true)
   const [matchLeads, setMatchLeads] = useState<MatchedLead[] | null>(null)
   const [matchModelName, setMatchModelName] = useState('')
-  const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null)
+  const [deletingItem, setDeletingItem] = useState<{ id: string; name: string; model_id: string } | null>(null)
 
   const [form, setForm] = useState({
     model_id: '', brand: '', year: '', color: '',
@@ -69,14 +70,21 @@ export default function EstoquePage() {
     return q
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, modelId: string) {
     await supabase.from('inventory').delete().eq('id', id)
+    await syncLeadStatusForModel(supabase, modelId)
     setDeletingItem(null)
     loadData()
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (!form.model_id) {
+      alert('Selecione ou crie um modelo na lista antes de salvar (clique em "+ Criar" no campo Modelo).')
+      return
+    }
+
     const data = {
       model_id: form.model_id,
       brand: form.brand,
@@ -89,7 +97,12 @@ export default function EstoquePage() {
     }
 
     const { error } = await supabase.from('inventory').insert(data)
-    if (error) return
+    if (error) {
+      alert(`Erro ao salvar moto: ${error.message}`)
+      return
+    }
+
+    await syncLeadStatusForModel(supabase, form.model_id)
 
     const selectedModel = models.find(m => m.id === form.model_id)
     const { data: matched } = await supabase
@@ -207,7 +220,7 @@ export default function EstoquePage() {
                           Detalhes
                         </Link>
                         <button
-                          onClick={() => setDeletingItem({ id: item.id, name: `${(item.models as Model | undefined)?.name ?? 'Moto'} ${item.brand}` })}
+                          onClick={() => setDeletingItem({ id: item.id, model_id: item.model_id, name: `${(item.models as Model | undefined)?.name ?? 'Moto'} ${item.brand}` })}
                           className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red"
                           style={{ background: 'rgba(255,255,255,0.04)' }} title="Excluir">
                           <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
@@ -267,7 +280,7 @@ export default function EstoquePage() {
                       Detalhes
                     </Link>
                     <button
-                      onClick={() => setDeletingItem({ id: item.id, name: `${modelName} ${item.brand}` })}
+                      onClick={() => setDeletingItem({ id: item.id, model_id: item.model_id, name: `${modelName} ${item.brand}` })}
                       className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red flex-shrink-0"
                       style={{ background: 'rgba(255,255,255,0.04)' }}>
                       <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
@@ -429,7 +442,7 @@ export default function EstoquePage() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => handleDelete(deletingItem.id)}
+                onClick={() => handleDelete(deletingItem.id, deletingItem.model_id)}
                 className="flex-1 py-2.5 rounded-lg font-data text-[12px] font-semibold text-white transition-colors"
                 style={{ background: '#FF1F2C', boxShadow: '0 0 16px rgba(255,31,44,0.3)' }}
               >

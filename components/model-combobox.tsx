@@ -54,11 +54,13 @@ export default function ModelCombobox({ value, onChange, required }: Props) {
     const name = query.trim()
     if (!name) return
     setCreating(true)
-    const { data } = await supabase.from('models').insert({ name }).select().single()
+    const { data, error } = await supabase.from('models').insert({ name }).select().single()
     if (data) {
       await loadModels()
       onChange(data.id)
       setQuery(data.name)
+    } else if (error) {
+      alert(`Erro ao criar modelo: ${error.message}`)
     }
     setCreating(false)
     setOpen(false)

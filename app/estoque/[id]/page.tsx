@@ -5,6 +5,7 @@ import LayoutShell from '@/components/layout-shell'
 import MatchPopup from '@/components/match-popup'
 import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
+import { syncLeadStatusForModel } from '@/lib/supabase/lead-sync'
 import type { InventoryItem, Model, InventoryStatus, MatchedLead } from '@/lib/supabase/types'
 
 const STATUS_LABELS: Record<InventoryStatus, string> = {
@@ -63,6 +64,7 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+    const previousModelId = item?.model_id
     await supabase.from('inventory').update({
       model_id: form.model_id,
       brand: form.brand,
@@ -73,6 +75,12 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
       status: form.status,
       notes: form.notes || null,
     }).eq('id', id)
+
+    await syncLeadStatusForModel(supabase, form.model_id)
+    if (previousModelId && previousModelId !== form.model_id) {
+      await syncLeadStatusForModel(supabase, previousModelId)
+    }
+
     setSaving(false)
     loadData()
   }
