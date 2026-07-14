@@ -89,7 +89,7 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
     setSearching(true)
     const { data } = await supabase
       .from('leads')
-      .select('name, phone, email, notes')
+      .select('name, phone, email, notes, last_contacted_at, created_at')
       .eq('interested_model', form.model_id)
       .in('status', ['pendente', 'a_negociar'])
       .order('last_contacted_at', { ascending: true, nullsFirst: true })

@@ -49,4 +49,6 @@ export type MatchedLead = {
   phone: string | null
   email: string | null
   notes: string | null
+  last_contacted_at: string | null
+  created_at: string
 }

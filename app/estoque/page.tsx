@@ -107,7 +107,7 @@ export default function EstoquePage() {
     const selectedModel = models.find(m => m.id === form.model_id)
     const { data: matched } = await supabase
       .from('leads')
-      .select('name, phone, email, notes')
+      .select('name, phone, email, notes, last_contacted_at, created_at')
       .eq('interested_model', form.model_id)
       .in('status', ['pendente', 'a_negociar'])
       .order('last_contacted_at', { ascending: true, nullsFirst: true })
@@ -202,7 +202,7 @@ export default function EstoquePage() {
                       {(leadCounts[item.model_id] ?? 0) > 0 ? (
                         <button
                           onClick={async () => {
-                            const { data } = await supabase.from('leads').select('name, phone, email, notes').eq('interested_model', item.model_id).in('status', ['pendente', 'a_negociar']).order('last_contacted_at', { ascending: true, nullsFirst: true })
+                            const { data } = await supabase.from('leads').select('name, phone, email, notes, last_contacted_at, created_at').eq('interested_model', item.model_id).in('status', ['pendente', 'a_negociar']).order('last_contacted_at', { ascending: true, nullsFirst: true })
                             setMatchModelName((item.models as Model | undefined)?.name ?? '')
                             setMatchLeads(data ?? [])
                           }}
@@ -264,7 +264,7 @@ export default function EstoquePage() {
                   {leadsCount > 0 && (
                     <button
                       onClick={async () => {
-                        const { data } = await supabase.from('leads').select('name, phone, email, notes').eq('interested_model', item.model_id).in('status', ['pendente', 'a_negociar']).order('last_contacted_at', { ascending: true, nullsFirst: true })
+                        const { data } = await supabase.from('leads').select('name, phone, email, notes, last_contacted_at, created_at').eq('interested_model', item.model_id).in('status', ['pendente', 'a_negociar']).order('last_contacted_at', { ascending: true, nullsFirst: true })
                         setMatchModelName(modelName)
                         setMatchLeads(data ?? [])
                       }}
