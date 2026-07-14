@@ -171,7 +171,7 @@ export default function PostagensPage() {
   return (
     <LayoutShell title="Postagens">
       {/* Nav de semana + progresso */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setWeekStart(d => addDays(d, -7))}
@@ -213,7 +213,8 @@ export default function PostagensPage() {
       </div>
 
       {/* Grid */}
-      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0">
+      <div className="rounded-xl overflow-hidden min-w-[640px]" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
         {/* Header dos dias */}
         <div className="grid" style={{ gridTemplateColumns: '140px repeat(6, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.025)' }}>
           <div className="px-4 py-3" />
@@ -357,6 +358,7 @@ export default function PostagensPage() {
             })}
           </div>
         ))}
+      </div>
       </div>
 
       {/* Modal CTA */}

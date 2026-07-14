@@ -149,117 +149,157 @@ export default function EstoquePage() {
           </button>
         </div>
       ) : (
-        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                {['Modelo', 'Marca', 'Ano', 'Km', 'Preço', 'Status', 'Leads', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 font-data font-semibold text-sp-muted text-[10px] uppercase tracking-wider">
-                    {h}
-                  </th>
+        <>
+          {/* Desktop — tabela */}
+          <div className="hidden md:block rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  {['Modelo', 'Marca', 'Ano', 'Km', 'Preço', 'Status', 'Leads', ''].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-data font-semibold text-sp-muted text-[10px] uppercase tracking-wider">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, i) => (
+                  <tr
+                    key={item.id}
+                    style={{ borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : undefined }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
+                  >
+                    <td className="px-4 py-3 font-data font-semibold text-sp-primary">{(item.models as Model | undefined)?.name}</td>
+                    <td className="px-4 py-3 font-data text-sp-muted">{item.brand}</td>
+                    <td className="px-4 py-3 font-data text-sp-muted">{item.year ?? '—'}</td>
+                    <td className="px-4 py-3 font-data text-sp-muted">
+                      {item.mileage_km != null ? `${item.mileage_km.toLocaleString('pt-BR')} km` : '—'}
+                    </td>
+                    <td className="px-4 py-3 font-data text-sp-primary font-semibold">
+                      {item.price != null ? `R$ ${Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold"
+                        style={{ background: STATUS_STYLE[item.status].bg, color: STATUS_STYLE[item.status].color, border: `1px solid ${STATUS_STYLE[item.status].border}` }}>
+                        {STATUS_LABELS[item.status]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {(leadCounts[item.model_id] ?? 0) > 0 ? (
+                        <button
+                          onClick={async () => {
+                            const { data } = await supabase.from('leads').select('name, phone, email, notes').eq('interested_model', item.model_id).in('status', ['pendente', 'a_negociar']).order('last_contacted_at', { ascending: true, nullsFirst: true })
+                            setMatchModelName((item.models as Model | undefined)?.name ?? '')
+                            setMatchLeads(data ?? [])
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
+                          style={{ background: 'rgba(255,31,44,0.1)', border: '1px solid rgba(255,31,44,0.25)', color: '#FF8080' }}>
+                          {leadCounts[item.model_id]} lead{leadCounts[item.model_id] > 1 ? 's' : ''}
+                        </button>
+                      ) : (
+                        <span className="font-data text-[12px] text-sp-faint">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Link href={`/estoque/${item.id}`} className="font-data text-[11px] text-sp-muted hover:text-sp-blue transition-colors">
+                          Detalhes
+                        </Link>
+                        <button
+                          onClick={() => setDeletingItem({ id: item.id, name: `${(item.models as Model | undefined)?.name ?? 'Moto'} ${item.brand}` })}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red"
+                          style={{ background: 'rgba(255,255,255,0.04)' }} title="Excluir">
+                          <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                <tr
-                  key={item.id}
-                  style={{ borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : undefined }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
-                >
-                  <td className="px-4 py-3 font-data font-semibold text-sp-primary">{(item.models as Model | undefined)?.name}</td>
-                  <td className="px-4 py-3 font-data text-sp-muted">{item.brand}</td>
-                  <td className="px-4 py-3 font-data text-sp-muted">{item.year ?? '—'}</td>
-                  <td className="px-4 py-3 font-data text-sp-muted">
-                    {item.mileage_km != null ? `${item.mileage_km.toLocaleString('pt-BR')} km` : '—'}
-                  </td>
-                  <td className="px-4 py-3 font-data text-sp-primary font-semibold">
-                    {item.price != null ? `R$ ${Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className="px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold"
-                      style={{
-                        background: STATUS_STYLE[item.status].bg,
-                        color: STATUS_STYLE[item.status].color,
-                        border: `1px solid ${STATUS_STYLE[item.status].border}`,
-                      }}
-                    >
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile — cards */}
+          <div className="block md:hidden space-y-3">
+            {items.map(item => {
+              const modelName = (item.models as Model | undefined)?.name ?? '—'
+              const leadsCount = leadCounts[item.model_id] ?? 0
+              return (
+                <div key={item.id} className="sp-card p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="font-display font-bold text-sp-primary text-[16px] leading-tight">{modelName}</span>
+                    <span className="px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold flex-shrink-0"
+                      style={{ background: STATUS_STYLE[item.status].bg, color: STATUS_STYLE[item.status].color, border: `1px solid ${STATUS_STYLE[item.status].border}` }}>
                       {STATUS_LABELS[item.status]}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {(leadCounts[item.model_id] ?? 0) > 0 ? (
-                      <button
-                        onClick={async () => {
-                          const { data } = await supabase
-                            .from('leads')
-                            .select('name, phone, email, notes')
-                            .eq('interested_model', item.model_id)
-                            .in('status', ['pendente', 'a_negociar'])
-                            .order('last_contacted_at', { ascending: true, nullsFirst: true })
-                          setMatchModelName((item.models as Model | undefined)?.name ?? '')
-                          setMatchLeads(data ?? [])
-                        }}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
-                        style={{
-                          background: 'rgba(255,31,44,0.1)',
-                          border: '1px solid rgba(255,31,44,0.25)',
-                          color: '#FF8080',
-                        }}
-                      >
-                        {leadCounts[item.model_id]} lead{leadCounts[item.model_id] > 1 ? 's' : ''}
-                      </button>
-                    ) : (
-                      <span className="font-data text-[12px] text-sp-faint">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/estoque/${item.id}`}
-                        className="font-data text-[11px] text-sp-muted hover:text-sp-blue transition-colors"
-                      >
-                        Detalhes
-                      </Link>
-                      <button
-                        onClick={() => setDeletingItem({ id: item.id, name: `${(item.models as Model | undefined)?.name ?? 'Moto'} ${item.brand}` })}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red"
-                        style={{ background: 'rgba(255,255,255,0.04)' }}
-                        title="Excluir"
-                      >
-                        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                          <path d="M10 11v6M14 11v6" />
-                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                        </svg>
-                      </button>
+                  </div>
+                  <div className="font-data text-[12px] text-sp-muted mb-2">
+                    {item.brand}{item.year ? ` · ${item.year}` : ''}{item.color ? ` · ${item.color}` : ''}
+                    {item.mileage_km != null ? ` · ${item.mileage_km.toLocaleString('pt-BR')} km` : ''}
+                  </div>
+                  {item.price != null && (
+                    <div className="font-display text-sp-red text-[22px] font-black sp-num-glow mb-2 leading-none">
+                      R$ {Number(item.price).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                  {leadsCount > 0 && (
+                    <button
+                      onClick={async () => {
+                        const { data } = await supabase.from('leads').select('name, phone, email, notes').eq('interested_model', item.model_id).in('status', ['pendente', 'a_negociar']).order('last_contacted_at', { ascending: true, nullsFirst: true })
+                        setMatchModelName(modelName)
+                        setMatchLeads(data ?? [])
+                      }}
+                      className="mb-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold"
+                      style={{ background: 'rgba(255,31,44,0.1)', border: '1px solid rgba(255,31,44,0.25)', color: '#FF8080' }}>
+                      {leadsCount} lead{leadsCount > 1 ? 's' : ''} interessado{leadsCount > 1 ? 's' : ''}
+                    </button>
+                  )}
+                  <div className="flex gap-2 pt-3 mt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <Link href={`/estoque/${item.id}`}
+                      className="flex-1 py-2 rounded-lg font-data text-[12px] text-center text-sp-muted hover:text-sp-blue transition-colors"
+                      style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                      Detalhes
+                    </Link>
+                    <button
+                      onClick={() => setDeletingItem({ id: item.id, name: `${modelName} ${item.brand}` })}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg transition-colors text-sp-muted hover:text-sp-red flex-shrink-0"
+                      style={{ background: 'rgba(255,255,255,0.04)' }}>
+                      <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {/* Modal nova moto */}
       {showForm && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 flex items-end md:items-center justify-center z-50 p-0 md:p-4"
           style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
         >
           <div
-            className="w-full max-w-lg rounded-2xl overflow-hidden"
+            className="w-full md:max-w-lg rounded-t-2xl md:rounded-2xl flex flex-col max-h-[90vh]"
             style={{
               background: '#0D1118',
               border: '1px solid rgba(255,255,255,0.1)',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 24px 64px rgba(0,0,0,0.8)',
             }}
           >
-            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="px-5 py-4 flex items-center justify-between flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <h2 className="font-display text-[13px] font-bold text-sp-primary uppercase tracking-[0.1em]">Nova Moto</h2>
               <button
                 onClick={() => setShowForm(false)}
@@ -271,8 +311,8 @@ export default function EstoquePage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label>Modelo *</Label>
                   <ModelCombobox value={form.model_id} onChange={id => setForm(f => ({ ...f, model_id: id }))} required />
@@ -286,7 +326,7 @@ export default function EstoquePage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <Label>Ano</Label>
                   <input
@@ -303,7 +343,7 @@ export default function EstoquePage() {
                     className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
                   />
                 </div>
-                <div>
+                <div className="col-span-2 sm:col-span-1">
                   <Label>Cor</Label>
                   <input
                     value={form.color}
@@ -312,7 +352,7 @@ export default function EstoquePage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label>Preço (R$)</Label>
                   <input
@@ -342,7 +382,7 @@ export default function EstoquePage() {
                   className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data resize-none"
                 />
               </div>
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2 pt-1 pb-2">
                 <button type="submit" className="sp-btn-primary px-5 py-2.5 text-white text-[12px]">
                   Salvar e buscar leads
                 </button>

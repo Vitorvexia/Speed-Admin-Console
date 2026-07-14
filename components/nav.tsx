@@ -75,7 +75,7 @@ export default function Nav({ collapsed, onToggle }: Props) {
 
   return (
     <aside
-      className="sp-nav flex flex-col flex-shrink-0 min-h-screen transition-all duration-200"
+      className="sp-nav hidden md:flex flex-col flex-shrink-0 min-h-screen transition-all duration-200"
       style={{ width: collapsed ? 56 : 220 }}
     >
       {/* Logo */}
