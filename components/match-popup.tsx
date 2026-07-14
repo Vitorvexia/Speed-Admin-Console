@@ -67,7 +67,11 @@ export default function MatchPopup({ leads, modelName, onClose }: Props) {
                 <circle cx="9" cy="7" r="4" />
               </svg>
             </div>
-            <p className="font-data text-[12px] text-sp-muted">Nenhum lead com interesse neste modelo.</p>
+            <p className="font-data text-[12px] text-sp-muted">
+              {leads.length === 0
+                ? 'Nenhum lead com interesse neste modelo.'
+                : 'Nenhum lead nesse período. Ajuste o filtro de data pra ver mais.'}
+            </p>
           </div>
         ) : (
           <ul className="max-h-80 overflow-y-auto divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
