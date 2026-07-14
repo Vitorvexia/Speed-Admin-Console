@@ -77,6 +77,12 @@ export default function EstoquePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (!form.model_id) {
+      alert('Selecione ou crie um modelo na lista antes de salvar (clique em "+ Criar" no campo Modelo).')
+      return
+    }
+
     const data = {
       model_id: form.model_id,
       brand: form.brand,
@@ -89,7 +95,10 @@ export default function EstoquePage() {
     }
 
     const { error } = await supabase.from('inventory').insert(data)
-    if (error) return
+    if (error) {
+      alert(`Erro ao salvar moto: ${error.message}`)
+      return
+    }
 
     const selectedModel = models.find(m => m.id === form.model_id)
     const { data: matched } = await supabase
