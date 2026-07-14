@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react'
 import LayoutShell from '@/components/layout-shell'
 import ModelCombobox from '@/components/model-combobox'
+import DateRangeFilter from '@/components/date-range-filter'
+import { DEFAULT_DATE_RANGE, dateRangeBounds, type DateRangeValue } from '@/lib/date-range'
 import { createClient } from '@/lib/supabase/client'
 import type { Lead, Model, LeadStatus } from '@/lib/supabase/types'
 
@@ -31,6 +33,8 @@ export default function LeadsPage() {
   const [models, setModels] = useState<Model[]>([])
   const [filterStatus, setFilterStatus] = useState('')
   const [filterModel, setFilterModel] = useState('')
+  const [filterCreatedRange, setFilterCreatedRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE)
+  const [filterContactedRange, setFilterContactedRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE)
   const [showForm, setShowForm] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null>(null)
   const editingLeadRef = useRef<Lead | null>(null)
@@ -63,7 +67,7 @@ export default function LeadsPage() {
   }
 
   useEffect(() => { editingLeadRef.current = editingLead }, [editingLead])
-  useEffect(() => { loadData() }, [filterStatus, filterModel])
+  useEffect(() => { loadData() }, [filterStatus, filterModel, filterCreatedRange, filterContactedRange])
 
   async function loadData() {
     setLoading(true)
@@ -80,6 +84,15 @@ export default function LeadsPage() {
     let q = supabase.from('leads').select('*, models(name)').order('created_at', { ascending: false })
     if (filterStatus) q = q.eq('status', filterStatus)
     if (filterModel) q = q.eq('interested_model', filterModel)
+
+    const createdBounds = dateRangeBounds(filterCreatedRange)
+    if (createdBounds.gte) q = q.gte('created_at', createdBounds.gte)
+    if (createdBounds.lte) q = q.lte('created_at', createdBounds.lte)
+
+    const contactedBounds = dateRangeBounds(filterContactedRange)
+    if (contactedBounds.gte) q = q.gte('last_contacted_at', contactedBounds.gte)
+    if (contactedBounds.lte) q = q.lte('last_contacted_at', contactedBounds.lte)
+
     return q
   }
 
@@ -162,6 +175,8 @@ export default function LeadsPage() {
           <option value="">Todos os modelos</option>
           {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
+        <DateRangeFilter label="Entrou em" value={filterCreatedRange} onChange={setFilterCreatedRange} />
+        <DateRangeFilter label="Último contato" value={filterContactedRange} onChange={setFilterContactedRange} />
       </div>
 
       {loading ? (

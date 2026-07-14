@@ -1,5 +1,8 @@
 'use client'
+import { useState } from 'react'
 import type { MatchedLead } from '@/lib/supabase/types'
+import DateRangeFilter from '@/components/date-range-filter'
+import { DEFAULT_DATE_RANGE, isWithinDateRange, type DateRangeValue } from '@/lib/date-range'
 
 type Props = {
   leads: MatchedLead[]
@@ -8,6 +11,8 @@ type Props = {
 }
 
 export default function MatchPopup({ leads, modelName, onClose }: Props) {
+  const [range, setRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE)
+  const filteredLeads = leads.filter(l => isWithinDateRange(l.last_contacted_at ?? l.created_at, range))
   return (
     <div
       className="fixed inset-0 flex items-center justify-center z-50 p-4"
@@ -34,8 +39,11 @@ export default function MatchPopup({ leads, modelName, onClose }: Props) {
               </h2>
             </div>
             <p className="font-data text-[11px] text-sp-muted">
-              {leads.length} lead{leads.length !== 1 ? 's' : ''} para contatar
+              {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} para contatar
             </p>
+            <div className="mt-2">
+              <DateRangeFilter label="Último contato" value={range} onChange={setRange} />
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -48,7 +56,7 @@ export default function MatchPopup({ leads, modelName, onClose }: Props) {
         </div>
 
         {/* Lista */}
-        {leads.length === 0 ? (
+        {filteredLeads.length === 0 ? (
           <div className="py-10 text-center">
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3"
@@ -59,11 +67,15 @@ export default function MatchPopup({ leads, modelName, onClose }: Props) {
                 <circle cx="9" cy="7" r="4" />
               </svg>
             </div>
-            <p className="font-data text-[12px] text-sp-muted">Nenhum lead com interesse neste modelo.</p>
+            <p className="font-data text-[12px] text-sp-muted">
+              {leads.length === 0
+                ? 'Nenhum lead com interesse neste modelo.'
+                : 'Nenhum lead nesse período. Ajuste o filtro de data pra ver mais.'}
+            </p>
           </div>
         ) : (
           <ul className="max-h-80 overflow-y-auto divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-            {leads.map((lead, i) => (
+            {filteredLeads.map((lead, i) => (
               <li key={i} className="px-5 py-4 hover:bg-white/[0.02] transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
