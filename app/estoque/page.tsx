@@ -6,6 +6,7 @@ import MatchPopup from '@/components/match-popup'
 import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
 import { syncLeadStatusForModel } from '@/lib/supabase/lead-sync'
+import { fetchMatchedLeads } from '@/lib/supabase/matched-leads'
 import type { InventoryItem, Model, InventoryStatus, MatchedLead } from '@/lib/supabase/types'
 
 const STATUS_LABELS: Record<InventoryStatus, string> = {
@@ -49,16 +50,16 @@ export default function EstoquePage() {
 
   async function loadData() {
     setLoading(true)
-    const [modelsRes, itemsQuery, leadsRes] = await Promise.all([
+    const [modelsRes, itemsQuery, leadModelsRes] = await Promise.all([
       supabase.from('models').select('*').order('name'),
       buildItemsQuery(),
-      supabase.from('leads').select('interested_model').in('status', ['pendente', 'a_negociar']),
+      supabase.from('lead_models').select('model_id, leads!inner(status)').in('leads.status', ['pendente', 'a_negociar']),
     ])
     setModels(modelsRes.data ?? [])
     setItems(itemsQuery.data ?? [])
     const counts: Record<string, number> = {}
-    for (const l of leadsRes.data ?? []) {
-      counts[l.interested_model] = (counts[l.interested_model] ?? 0) + 1
+    for (const row of leadModelsRes.data ?? []) {
+      counts[row.model_id] = (counts[row.model_id] ?? 0) + 1
     }
     setLeadCounts(counts)
     setLoading(false)
@@ -105,12 +106,7 @@ export default function EstoquePage() {
     await syncLeadStatusForModel(supabase, form.model_id)
 
     const selectedModel = models.find(m => m.id === form.model_id)
-    const { data: matched } = await supabase
-      .from('leads')
-      .select('name, phone, email, notes, last_contacted_at, created_at')
-      .eq('interested_model', form.model_id)
-      .in('status', ['pendente', 'a_negociar'])
-      .order('last_contacted_at', { ascending: true, nullsFirst: true })
+    const matched = await fetchMatchedLeads(supabase, form.model_id)
 
     setShowForm(false)
     setForm({ model_id: '', brand: '', year: '', color: '', mileage_km: '', price: '', status: 'disponivel', notes: '' })
@@ -202,9 +198,9 @@ export default function EstoquePage() {
                       {(leadCounts[item.model_id] ?? 0) > 0 ? (
                         <button
                           onClick={async () => {
-                            const { data } = await supabase.from('leads').select('name, phone, email, notes, last_contacted_at, created_at').eq('interested_model', item.model_id).in('status', ['pendente', 'a_negociar']).order('last_contacted_at', { ascending: true, nullsFirst: true })
+                            const data = await fetchMatchedLeads(supabase, item.model_id)
                             setMatchModelName((item.models as Model | undefined)?.name ?? '')
-                            setMatchLeads(data ?? [])
+                            setMatchLeads(data)
                           }}
                           className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
                           style={{ background: 'rgba(255,31,44,0.1)', border: '1px solid rgba(255,31,44,0.25)', color: '#FF8080' }}>
@@ -264,9 +260,9 @@ export default function EstoquePage() {
                   {leadsCount > 0 && (
                     <button
                       onClick={async () => {
-                        const { data } = await supabase.from('leads').select('name, phone, email, notes, last_contacted_at, created_at').eq('interested_model', item.model_id).in('status', ['pendente', 'a_negociar']).order('last_contacted_at', { ascending: true, nullsFirst: true })
+                        const data = await fetchMatchedLeads(supabase, item.model_id)
                         setMatchModelName(modelName)
-                        setMatchLeads(data ?? [])
+                        setMatchLeads(data)
                       }}
                       className="mb-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold"
                       style={{ background: 'rgba(255,31,44,0.1)', border: '1px solid rgba(255,31,44,0.25)', color: '#FF8080' }}>
