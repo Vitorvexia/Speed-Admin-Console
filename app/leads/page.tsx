@@ -134,6 +134,12 @@ export default function LeadsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (form.model_ids.length === 0) {
+      alert('Selecione ao menos um modelo de interesse antes de salvar.')
+      return
+    }
+
     const data = {
       name: form.name,
       phone: form.phone || null,
