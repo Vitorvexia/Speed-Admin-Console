@@ -4,7 +4,7 @@
 
 Hoje `leads.interested_model` é uma FK única pra `models`. Cliente que se interessa por mais de uma moto exige criar leads duplicados ou perder informação. Objetivo: um lead pode ter N modelos de interesse.
 
-Volume: ~200 leads/ano. Baixo — decisões de performance abaixo priorizam simplicidade sobre otimização prematura.
+Volume: ~1000 leads/semestre (~2000/ano). Filtros e contagens usam query server-side (não client-side) por causa desse volume; sync de estoque continua N+1 aceitável porque o subconjunto afetado por mudança de estoque é só quem se interessa naquele modelo, não a base inteira.
 
 ## Decisões
 
@@ -51,8 +51,8 @@ N+1 aceito — o subconjunto de leads afetados por uma mudança de estoque é s�
 ## Queries de leitura
 
 **`app/leads/page.tsx`**
-- Fetch: `supabase.from('leads').select('*, lead_models(models(id, name))')`.
-- Filtro por modelo (`filterModel`, dropdown single-select): aplicado client-side sobre o resultado (`lead.models.some(m => m.id === filterModel)`) — volume baixo dispensa filtro server-side.
+- Fetch: `supabase.from('leads').select('*, lead_models!inner(models(id, name))')` quando há filtro de modelo ativo; sem filtro, embed normal (`lead_models(models(id, name))`, sem `!inner`) pra não excluir leads sem modelo carregado incorretamente.
+- Filtro por modelo (`filterModel`, dropdown single-select): server-side via `.eq('lead_models.model_id', filterModel)` combinado com o `!inner` acima — evita trazer os ~2000 leads/ano inteiros pro client só pra filtrar.
 - Form: `interested_model: string` no state vira `model_ids: string[]`.
 - `handleModelChange` (auto-status na criação/edição): roda sobre a lista inteira — `hasStock` = true se **qualquer** `model_id` selecionado tem estoque disponível.
 - Submit (insert/update): grava lead normalmente, depois substitui as linhas de `lead_models` (delete + insert, ou upsert) pro `lead.id`.
