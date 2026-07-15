@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import LayoutShell from '@/components/layout-shell'
-import ModelCombobox from '@/components/model-combobox'
+import ModelMultiCombobox from '@/components/model-multi-combobox'
 import DateRangeFilter from '@/components/date-range-filter'
 import { DEFAULT_DATE_RANGE, dateRangeBounds, type DateRangeValue } from '@/lib/date-range'
 import { createClient } from '@/lib/supabase/client'
@@ -27,6 +27,8 @@ function Label({ children }: { children: React.ReactNode }) {
   )
 }
 
+type LeadRow = Omit<Lead, 'models'> & { lead_models: { models: Model }[] }
+
 export default function LeadsPage() {
   const supabase = createClient()
   const [leads, setLeads] = useState<Lead[]>([])
@@ -43,24 +45,24 @@ export default function LeadsPage() {
 
   const [form, setForm] = useState({
     name: '', phone: '', email: '',
-    interested_model: '', status: 'pendente' as LeadStatus,
+    model_ids: [] as string[], status: 'pendente' as LeadStatus,
     notes: '', last_contacted_at: '',
   })
   const [autoStatus, setAutoStatus] = useState<{ reason: string; hasStock: boolean } | null>(null)
 
-  async function handleModelChange(id: string) {
-    setForm(f => ({ ...f, interested_model: id }))
+  async function handleModelsChange(ids: string[]) {
+    setForm(f => ({ ...f, model_ids: ids }))
     setAutoStatus(null)
-    if (!id) return
+    if (ids.length === 0) return
     const { data, error } = await supabase
       .from('inventory')
       .select('id')
-      .eq('model_id', id)
+      .in('model_id', ids)
       .eq('status', 'disponivel')
       .limit(1)
     if (error) return
     const hasStock = (data?.length ?? 0) > 0
-    setAutoStatus({ hasStock, reason: hasStock ? 'Moto disponível no estoque' : 'Modelo não disponível no estoque' })
+    setAutoStatus({ hasStock, reason: hasStock ? 'Ao menos um modelo disponível no estoque' : 'Nenhum modelo disponível no estoque' })
     if (!editingLeadRef.current) {
       setForm(f => ({ ...f, status: hasStock ? 'a_negociar' : 'pendente' }))
     }
@@ -71,19 +73,25 @@ export default function LeadsPage() {
 
   async function loadData() {
     setLoading(true)
+    let leadIdFilter: string[] | null = null
+    if (filterModel) {
+      const { data: matching } = await supabase.from('lead_models').select('lead_id').eq('model_id', filterModel)
+      leadIdFilter = (matching ?? []).map(r => r.lead_id)
+    }
     const [modelsRes, leadsRes] = await Promise.all([
       supabase.from('models').select('*').order('name'),
-      buildLeadsQuery(),
+      buildLeadsQuery(leadIdFilter),
     ])
     setModels(modelsRes.data ?? [])
-    setLeads(leadsRes.data ?? [])
+    const rows = (leadsRes.data ?? []) as LeadRow[]
+    setLeads(rows.map(({ lead_models, ...rest }) => ({ ...rest, models: lead_models.map(lm => lm.models) })))
     setLoading(false)
   }
 
-  function buildLeadsQuery() {
-    let q = supabase.from('leads').select('*, models(name)').order('created_at', { ascending: false })
+  function buildLeadsQuery(leadIdFilter: string[] | null) {
+    let q = supabase.from('leads').select('*, lead_models(models(id, name))').order('created_at', { ascending: false })
     if (filterStatus) q = q.eq('status', filterStatus)
-    if (filterModel) q = q.eq('interested_model', filterModel)
+    if (leadIdFilter) q = q.in('id', leadIdFilter)
 
     const createdBounds = dateRangeBounds(filterCreatedRange)
     if (createdBounds.gte) q = q.gte('created_at', createdBounds.gte)
@@ -98,7 +106,7 @@ export default function LeadsPage() {
 
   function openNew() {
     setEditingLead(null)
-    setForm({ name: '', phone: '', email: '', interested_model: '', status: 'pendente', notes: '', last_contacted_at: '' })
+    setForm({ name: '', phone: '', email: '', model_ids: [], status: 'pendente', notes: '', last_contacted_at: '' })
     setAutoStatus(null)
     setShowForm(true)
   }
@@ -110,7 +118,7 @@ export default function LeadsPage() {
       name: lead.name,
       phone: lead.phone ?? '',
       email: lead.email ?? '',
-      interested_model: lead.interested_model,
+      model_ids: lead.models.map(m => m.id),
       status: lead.status,
       notes: lead.notes ?? '',
       last_contacted_at: lead.last_contacted_at ? lead.last_contacted_at.slice(0, 10) : '',
@@ -130,15 +138,24 @@ export default function LeadsPage() {
       name: form.name,
       phone: form.phone || null,
       email: form.email || null,
-      interested_model: form.interested_model,
       status: form.status,
       notes: form.notes || null,
       last_contacted_at: form.last_contacted_at ? new Date(form.last_contacted_at).toISOString() : null,
     }
+    let leadId = editingLead?.id
     if (editingLead) {
       await supabase.from('leads').update(data).eq('id', editingLead.id)
     } else {
-      await supabase.from('leads').insert(data)
+      const { data: inserted, error } = await supabase.from('leads').insert(data).select('id').single()
+      if (error || !inserted) {
+        alert(`Erro ao salvar lead: ${error?.message}`)
+        return
+      }
+      leadId = inserted.id
+    }
+    await supabase.from('lead_models').delete().eq('lead_id', leadId)
+    if (form.model_ids.length > 0) {
+      await supabase.from('lead_models').insert(form.model_ids.map(model_id => ({ lead_id: leadId, model_id })))
     }
     setShowForm(false)
     loadData()
@@ -200,7 +217,7 @@ export default function LeadsPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                  {['Nome', 'Telefone', 'Modelo', 'Status', 'Último contato', ''].map(h => (
+                  {['Nome', 'Telefone', 'Modelos', 'Status', 'Último contato', ''].map(h => (
                     <th key={h} className="text-left px-4 py-3 font-data font-semibold text-sp-muted text-[10px] uppercase tracking-wider">
                       {h}
                     </th>
@@ -228,7 +245,16 @@ export default function LeadsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-data text-sp-muted">{(lead.models as Model | undefined)?.name ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {lead.models.length > 0 ? lead.models.map(m => (
+                          <span key={m.id} className="px-2 py-0.5 rounded-full font-data text-[10px] text-sp-muted"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            {m.name}
+                          </span>
+                        )) : <span className="font-data text-[12px] text-sp-faint">—</span>}
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <span className="px-2.5 py-0.5 rounded-full font-data text-[10px] font-semibold"
                         style={{ background: STATUS_STYLE[lead.status].bg, color: STATUS_STYLE[lead.status].color, border: `1px solid ${STATUS_STYLE[lead.status].border}` }}>
@@ -282,8 +308,13 @@ export default function LeadsPage() {
                     </a>
                   </div>
                 ) : null}
-                <div className="font-data text-[12px] text-sp-muted mb-1">
-                  {(lead.models as Model | undefined)?.name ?? '—'}
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {lead.models.length > 0 ? lead.models.map(m => (
+                    <span key={m.id} className="px-2 py-0.5 rounded-full font-data text-[10px] text-sp-muted"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      {m.name}
+                    </span>
+                  )) : <span className="font-data text-[12px] text-sp-faint">—</span>}
                 </div>
                 {lead.last_contacted_at && (
                   <div className="font-data text-[11px] text-sp-muted mb-1">
@@ -388,8 +419,8 @@ export default function LeadsPage() {
                 </div>
               </div>
               <div>
-                <Label>Modelo de interesse *</Label>
-                <ModelCombobox value={form.interested_model} onChange={handleModelChange} required />
+                <Label>Modelos de interesse *</Label>
+                <ModelMultiCombobox value={form.model_ids} onChange={handleModelsChange} required />
               </div>
               <div>
                 <Label>Último contato</Label>
