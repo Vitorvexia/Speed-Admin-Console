@@ -12,13 +12,12 @@ export type Lead = {
   name: string
   phone: string | null
   email: string | null
-  interested_model: string
   status: LeadStatus
   notes: string | null
   last_contacted_at: string | null
   created_at: string
   updated_at: string
-  models?: Model
+  models: Model[]
 }
 
 export type InventoryItem = {
