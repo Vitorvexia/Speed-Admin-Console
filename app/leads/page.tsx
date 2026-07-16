@@ -35,6 +35,7 @@ export default function LeadsPage() {
   const [models, setModels] = useState<Model[]>([])
   const [filterStatus, setFilterStatus] = useState('')
   const [filterModel, setFilterModel] = useState('')
+  const [filterContactType, setFilterContactType] = useState('')
   const [filterCreatedRange, setFilterCreatedRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE)
   const [filterContactedRange, setFilterContactedRange] = useState<DateRangeValue>(DEFAULT_DATE_RANGE)
   const [showForm, setShowForm] = useState(false)
@@ -69,7 +70,7 @@ export default function LeadsPage() {
   }
 
   useEffect(() => { editingLeadRef.current = editingLead }, [editingLead])
-  useEffect(() => { loadData() }, [filterStatus, filterModel, filterCreatedRange, filterContactedRange])
+  useEffect(() => { loadData() }, [filterStatus, filterModel, filterContactType, filterCreatedRange, filterContactedRange])
 
   async function loadData() {
     setLoading(true)
@@ -91,6 +92,8 @@ export default function LeadsPage() {
   function buildLeadsQuery(leadIdFilter: string[] | null) {
     let q = supabase.from('leads').select('*, lead_models(models(id, name))').order('created_at', { ascending: false })
     if (filterStatus) q = q.eq('status', filterStatus)
+    if (filterContactType === 'whatsapp') q = q.not('phone', 'is', null)
+    if (filterContactType === 'instagram') q = q.not('instagram', 'is', null)
     if (leadIdFilter) q = q.in('id', leadIdFilter)
 
     const createdBounds = dateRangeBounds(filterCreatedRange)
@@ -205,6 +208,15 @@ export default function LeadsPage() {
         >
           <option value="">Todos os modelos</option>
           {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+        <select
+          value={filterContactType}
+          onChange={e => setFilterContactType(e.target.value)}
+          className="sp-select font-data text-[13px] px-4 py-2"
+        >
+          <option value="">Todos os contatos</option>
+          <option value="whatsapp">Tem WhatsApp</option>
+          <option value="instagram">Tem Instagram</option>
         </select>
         <DateRangeFilter label="Entrou em" value={filterCreatedRange} onChange={setFilterCreatedRange} />
         <DateRangeFilter label="Último contato" value={filterContactedRange} onChange={setFilterContactedRange} />
