@@ -12,6 +12,7 @@ export type Lead = {
   name: string
   phone: string | null
   email: string | null
+  instagram: string | null
   status: LeadStatus
   notes: string | null
   last_contacted_at: string | null
