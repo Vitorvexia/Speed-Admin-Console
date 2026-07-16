@@ -44,7 +44,7 @@ export default function LeadsPage() {
   const [deletingItem, setDeletingItem] = useState<{ id: string; name: string } | null>(null)
 
   const [form, setForm] = useState({
-    name: '', phone: '', email: '',
+    name: '', phone: '', email: '', instagram: '',
     model_ids: [] as string[], status: 'pendente' as LeadStatus,
     notes: '', last_contacted_at: '',
   })
@@ -106,7 +106,7 @@ export default function LeadsPage() {
 
   function openNew() {
     setEditingLead(null)
-    setForm({ name: '', phone: '', email: '', model_ids: [], status: 'pendente', notes: '', last_contacted_at: '' })
+    setForm({ name: '', phone: '', email: '', instagram: '', model_ids: [], status: 'pendente', notes: '', last_contacted_at: '' })
     setAutoStatus(null)
     setShowForm(true)
   }
@@ -118,6 +118,7 @@ export default function LeadsPage() {
       name: lead.name,
       phone: lead.phone ?? '',
       email: lead.email ?? '',
+      instagram: lead.instagram ?? '',
       model_ids: lead.models.map(m => m.id),
       status: lead.status,
       notes: lead.notes ?? '',
@@ -140,10 +141,17 @@ export default function LeadsPage() {
       return
     }
 
+    const instagram = form.instagram.trim().replace(/^@/, '') || null
+    if (!form.phone && !instagram) {
+      alert('Informe ao menos um contato: telefone ou Instagram.')
+      return
+    }
+
     const data = {
       name: form.name,
       phone: form.phone || null,
       email: form.email || null,
+      instagram,
       status: form.status,
       notes: form.notes || null,
       last_contacted_at: form.last_contacted_at ? new Date(form.last_contacted_at).toISOString() : null,
@@ -399,6 +407,18 @@ export default function LeadsPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
+                  <Label>Instagram</Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sp-faint font-data text-[13px] pointer-events-none">@</span>
+                    <input
+                      value={form.instagram}
+                      onChange={e => setForm(f => ({ ...f, instagram: e.target.value }))}
+                      placeholder="usuario"
+                      className="sp-input w-full pl-8 pr-4 py-2.5 text-[13px] text-sp-primary font-data"
+                    />
+                  </div>
+                </div>
+                <div>
                   <Label>Email</Label>
                   <input
                     type="email" value={form.email}
@@ -406,6 +426,8 @@ export default function LeadsPage() {
                     className="sp-input w-full px-4 py-2.5 text-[13px] text-sp-primary font-data"
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label>Status</Label>
                   <select
