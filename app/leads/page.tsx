@@ -231,7 +231,7 @@ export default function LeadsPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                  {['Nome', 'Telefone', 'Modelos', 'Status', 'Último contato', ''].map(h => (
+                  {['Nome', 'Contato', 'Modelos', 'Status', 'Último contato', ''].map(h => (
                     <th key={h} className="text-left px-4 py-3 font-data font-semibold text-sp-muted text-[10px] uppercase tracking-wider">
                       {h}
                     </th>
@@ -248,15 +248,28 @@ export default function LeadsPage() {
                   >
                     <td className="px-4 py-3 font-data font-semibold text-sp-primary">{lead.name}</td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-data text-sp-muted">{lead.phone ?? '—'}</span>
+                      <div className="flex flex-col gap-1">
                         {lead.phone && (
-                          <a href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
-                            style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ADE80' }}>
-                            WA
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <span className="font-data text-sp-muted">{lead.phone}</span>
+                            <a href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
+                              style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ADE80' }}>
+                              WA
+                            </a>
+                          </div>
                         )}
+                        {lead.instagram && (
+                          <div className="flex items-center gap-2">
+                            <span className="font-data text-sp-muted">@{lead.instagram}</span>
+                            <a href={`https://instagram.com/${lead.instagram}`} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-data text-[10px] font-semibold transition-colors"
+                              style={{ background: 'rgba(217,70,239,0.1)', border: '1px solid rgba(217,70,239,0.25)', color: '#E879F9' }}>
+                              IG
+                            </a>
+                          </div>
+                        )}
+                        {!lead.phone && !lead.instagram && <span className="font-data text-sp-faint">—</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -319,6 +332,16 @@ export default function LeadsPage() {
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-data text-[10px] font-semibold"
                       style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ADE80' }}>
                       WA
+                    </a>
+                  </div>
+                ) : null}
+                {lead.instagram ? (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-data text-[13px] text-sp-muted">@{lead.instagram}</span>
+                    <a href={`https://instagram.com/${lead.instagram}`} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-data text-[10px] font-semibold"
+                      style={{ background: 'rgba(217,70,239,0.1)', border: '1px solid rgba(217,70,239,0.25)', color: '#E879F9' }}>
+                      IG
                     </a>
                   </div>
                 ) : null}
