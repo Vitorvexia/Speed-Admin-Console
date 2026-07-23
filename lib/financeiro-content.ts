@@ -4,10 +4,19 @@ export type TabelaFaixa = {
   entrada: string
 }
 
+export type CampoPadrao = {
+  label: string
+  binario?: boolean
+}
+
+export type Categoria = 'Financiamento' | 'Parcelamento no cartão' | 'Canal informal'
+
 export type ParceiroFinanceiro = {
   slug: string
   nome: string
+  categoria: Categoria
   subtitulo: string
+  fluxo?: string
   campos: string[]
   login?: string
   tabela?: TabelaFaixa[]
@@ -16,27 +25,33 @@ export type ParceiroFinanceiro = {
   aviso?: string
 }
 
+export const CHECKLIST_PADRAO: CampoPadrao[] = [
+  { label: 'CPF' },
+  { label: 'Data de nascimento' },
+  { label: 'Valor de renda comprovada' },
+  { label: 'Telefone' },
+  { label: 'CNH', binario: true },
+  { label: 'Valor de entrada', binario: true },
+]
+
 export const FINANCEIRO_CHECKLIST: ParceiroFinanceiro[] = [
   {
     slug: 'pan',
     nome: 'PAN',
+    categoria: 'Financiamento',
     subtitulo: 'Financiamento moto/carro',
     campos: [
-      'CPF',
       'Moto ou carro',
-      'Data de nascimento',
       'Placa (consultar valor na tabela do parceiro — busca manual, fora do sistema)',
-      'Valor de renda comprovada',
-      'Telefone',
-      'CNH (tem ou não)',
-      'Valor de entrada (tem ou não)',
     ],
     login: 'Ver gestor de senhas da loja',
   },
   {
     slug: 'sicredi',
     nome: 'Sicredi',
-    subtitulo: 'Financiamento — fluxo: Nova Simulação → veículo → CPF → dados cadastrais → dados do veículo (placa)',
+    categoria: 'Financiamento',
+    subtitulo: 'Financiamento — checklist padrão + placa do veículo',
+    fluxo: 'Nova Simulação → Veículo → CPF → Dados cadastrais → Dados do veículo (placa)',
     campos: [],
     login: 'Ver gestor de senhas da loja',
     tabela: [
@@ -61,6 +76,7 @@ export const FINANCEIRO_CHECKLIST: ParceiroFinanceiro[] = [
   {
     slug: 'listofacil',
     nome: 'ListoFacil',
+    categoria: 'Parcelamento no cartão',
     subtitulo: 'Parcelamento no cartão',
     campos: [
       'Valor a simular',
@@ -72,12 +88,10 @@ export const FINANCEIRO_CHECKLIST: ParceiroFinanceiro[] = [
   {
     slug: 'ricardo-bovalente',
     nome: 'Ricardo Bovalente',
+    categoria: 'Canal informal',
     subtitulo: 'Canal de repasse — não é financiamento bancário formal. Contato direto (WhatsApp/telefone), sem portal próprio.',
     campos: [
-      'CPF',
       'Valor da moto',
-      'Valor de entrada (se tiver)',
-      'CNH (obrigatória)',
       'Se já tentou no PAN',
       'Placa da moto',
     ],
