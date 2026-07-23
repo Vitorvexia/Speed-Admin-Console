@@ -43,6 +43,16 @@ function IconPostagens() {
   )
 }
 
+function IconFinanceiro() {
+  return (
+    <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <line x1="2" y1="10" x2="22" y2="10" />
+      <line x1="6" y1="15" x2="10" y2="15" />
+    </svg>
+  )
+}
+
 function IconLogout() {
   return (
     <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -58,6 +68,7 @@ const links = [
   { href: '/leads',      label: 'Leads',      Icon: IconLeads      },
   { href: '/estoque',    label: 'Estoque',    Icon: IconEstoque    },
   { href: '/postagens',  label: 'Postagens',  Icon: IconPostagens  },
+  { href: '/financeiro', label: 'Financeiro', Icon: IconFinanceiro },
 ]
 
 type Props = { collapsed: boolean; onToggle: () => void }
