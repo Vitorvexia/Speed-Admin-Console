@@ -52,6 +52,16 @@ type SlotKey = typeof SLOTS[number]['key']
 
 const DAY_NAMES = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
+// ─── Checklist de ordem de postagem (moto nova) ──────────────────────────────
+const CHECKLIST_STEPS = [
+  'Tirou foto e fez vídeo speed ramp',
+  'Postar Instagram Stories e Feed',
+  'Postar perfil e página do Facebook',
+  'Postar Marketplace',
+  'Postar catálogo WhatsApp',
+  'Consultar clientes interessados',
+] as const
+
 type MotoSuggestion = { name: string; brand: string; year: number | null; price: number | null }
 
 // ─── Helpers de data ─────────────────────────────────────────────────────────
@@ -94,6 +104,7 @@ export default function PostagensPage() {
   const [toggling, setToggling]     = useState<string | null>(null)
   const [ctaModal, setCtaModal]     = useState<{ text: string; moto: string } | null>(null)
   const [copied, setCopied]         = useState(false)
+  const [checklistDone, setChecklistDone] = useState<boolean[]>(() => CHECKLIST_STEPS.map(() => false))
   const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
     const todayISO = toISO(new Date())
     const mon = getMondayOfWeek(new Date())
@@ -164,6 +175,17 @@ export default function PostagensPage() {
     setToggling(null)
   }
 
+  function toggleChecklistStep(i: number) {
+    setChecklistDone(prev => {
+      const next = [...prev]
+      next[i] = !next[i]
+      if (next.every(Boolean)) {
+        setTimeout(() => setChecklistDone(CHECKLIST_STEPS.map(() => false)), 1500)
+      }
+      return next
+    })
+  }
+
   async function copyText(text: string) {
     await navigator.clipboard.writeText(text)
     setCopied(true)
@@ -215,6 +237,57 @@ export default function PostagensPage() {
                 boxShadow: `0 0 6px ${doneSlots === totalSlots ? 'rgba(34,197,94,0.5)' : 'rgba(255,31,44,0.4)'}`,
               }} />
           </div>
+        </div>
+      </div>
+
+      {/* Checklist de ordem de postagem (moto nova) */}
+      <div className="sp-card p-4 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <span className="font-display text-[12px] font-bold text-sp-primary uppercase tracking-[0.1em]">
+            Checklist de postagem
+          </span>
+          <span className="font-data text-[12px] text-sp-muted">
+            <span className="text-sp-primary font-semibold">{checklistDone.filter(Boolean).length}</span>/{CHECKLIST_STEPS.length}
+          </span>
+        </div>
+        <div className="space-y-2">
+          {CHECKLIST_STEPS.map((step, i) => {
+            const done = checklistDone[i]
+            return (
+              <button
+                key={i}
+                onClick={() => toggleChecklistStep(i)}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all"
+                style={{
+                  background: done ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${done ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                }}
+              >
+                <span
+                  className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                  style={done ? {
+                    background: 'rgba(34,197,94,0.18)',
+                    border: '2px solid #22C55E',
+                    boxShadow: '0 0 8px rgba(34,197,94,0.3)',
+                  } : {
+                    border: '2px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  {done && (
+                    <svg width="12" height="12" fill="none" stroke="#22C55E" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </span>
+                <span
+                  className="font-data text-[12px]"
+                  style={{ color: done ? '#4ADE80' : '#94A3B8', textDecoration: done ? 'line-through' : 'none' }}
+                >
+                  {step}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
