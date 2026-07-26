@@ -6,6 +6,7 @@ import MatchPopup from '@/components/match-popup'
 import ModelCombobox from '@/components/model-combobox'
 import { createClient } from '@/lib/supabase/client'
 import { syncLeadStatusForModel } from '@/lib/supabase/lead-sync'
+import { fetchMatchedLeads } from '@/lib/supabase/matched-leads'
 import type { InventoryItem, Model, InventoryStatus, MatchedLead } from '@/lib/supabase/types'
 
 const STATUS_LABELS: Record<InventoryStatus, string> = {
@@ -87,13 +88,8 @@ export default function EstoqueDetailPage({ params }: { params: Promise<{ id: st
 
   async function handleMatchSearch() {
     setSearching(true)
-    const { data } = await supabase
-      .from('leads')
-      .select('name, phone, email, notes, last_contacted_at, created_at')
-      .eq('interested_model', form.model_id)
-      .in('status', ['pendente', 'a_negociar'])
-      .order('last_contacted_at', { ascending: true, nullsFirst: true })
-    setMatchLeads(data ?? [])
+    const data = await fetchMatchedLeads(supabase, form.model_id)
+    setMatchLeads(data)
     setSearching(false)
   }
 
